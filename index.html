@@ -606,6 +606,26 @@ function goTab(tab, month){
 
 function render(){
   const el = $("#tabContent");
+  const active = document.activeElement;
+  let focusState = null;
+  
+  if (active && active.tagName !== 'BODY') {
+    focusState = {
+      tagName: active.tagName,
+      id: active.id,
+      dataset: Object.assign({}, active.dataset),
+      value: active.value
+    };
+    try {
+      if (typeof active.selectionStart === 'number') {
+        focusState.selectionStart = active.selectionStart;
+        focusState.selectionEnd = active.selectionEnd;
+      }
+    } catch (e) {
+      // Some inputs like type=number or type=date don't support setSelectionRange
+    }
+  }
+
   if(currentTab==='dashboard') el.innerHTML = renderDashboard();
   else if(currentTab==='accounts') el.innerHTML = renderAccounts();
   else if(currentTab==='savings') el.innerHTML = renderSavings();
@@ -613,7 +633,30 @@ function render(){
   else if(currentTab==='credit') el.innerHTML = renderCredit();
   else if(currentTab==='settings') el.innerHTML = renderSettings();
   else if(currentTab==='month') el.innerHTML = renderMonth(currentMonth);
+  
   attachHandlers();
+
+  if (focusState) {
+    let target = null;
+    if (focusState.id) {
+      target = document.getElementById(focusState.id);
+    } else {
+      const keys = Object.keys(focusState.dataset);
+      if (keys.length > 0) {
+        const key = keys[0];
+        const attr = `data-${key.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}`;
+        target = document.querySelector(`${focusState.tagName.toLowerCase()}[${attr}="${focusState.dataset[key]}"]`);
+      }
+    }
+    if (target) {
+      target.focus();
+      try {
+        if (focusState.selectionStart !== undefined) {
+          target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+        }
+      } catch (e) {}
+    }
+  }
 }
 
 /* ---------------- Derived calculations ---------------- */
@@ -875,12 +918,20 @@ function renderBills(){
   const list = DATA.bills[activeMonth] || [];
   const paid = list.filter(b=>b.paid).length;
   const pct = list.length ? Math.round(paid/list.length*100) : 0;
+  const accounts = DATA.accounts||[];
 
   const rows = list.map((b,idx)=>`
     <tr>
       <td>${idx+1}</td>
       <td><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
       <td><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
+      <td><input type="number" class="mono" data-bill-amount="${b.id}" value="${b.amount||0}"></td>
+      <td>
+        <select data-bill-account="${b.id}">
+          <option value="">—</option>
+          ${accounts.map(a=>`<option value="${a.id}" ${b.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
+        </select>
+      </td>
       <td style="text-align:center;"><input type="checkbox" class="checkbox" data-bill-paid="${b.id}" ${b.paid?'checked':''}></td>
       <td style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
     </tr>`).join('');
@@ -900,8 +951,8 @@ function renderBills(){
     <div class="card">
       <h3>Bills &amp; Subscriptions — ${MONTH_NAMES[activeMonth]}</h3>
       <table>
-        <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="5" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
+        <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
       </table>
       <button class="btn small ghost add-row" id="addBillBtn">+ Add bill</button>
     </div>
@@ -1120,14 +1171,19 @@ function attachHandlers(){
       btn.addEventListener('click', ()=>{ renderBills._month = btn.dataset.billMonthTab; render(); });
     });
     $("#addBillBtn")?.addEventListener('click', ()=>{
-      DATA.bills[renderBills._month].push({id:uid(), date:'', name:'', paid:false});
+      DATA.bills[renderBills._month].push({id:uid(), date:'', name:'', amount:0, accountId:'', paid:false});
       queueSave(); render();
     });
-    $$("[data-bill-date]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billDate,'date',e.target.value); }));
-    $$("[data-bill-name]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billName,'name',e.target.value); }));
-    $$("[data-bill-paid]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billPaid,'paid',e.target.checked); render(); }));
+    
+    $$("[data-bill-date]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billDate,'date',e.target.value); syncBillToMoneyTx(e.target.dataset.billDate); }));
+    $$("[data-bill-name]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billName,'name',e.target.value); syncBillToMoneyTx(e.target.dataset.billName); }));
+    $$("[data-bill-amount]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billAmount,'amount',Number(e.target.value)); syncBillToMoneyTx(e.target.dataset.billAmount); render(); }));
+    $$("[data-bill-account]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billAccount,'accountId',e.target.value); syncBillToMoneyTx(e.target.dataset.billAccount); render(); }));
+    $$("[data-bill-paid]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billPaid,'paid',e.target.checked); syncBillToMoneyTx(e.target.dataset.billPaid); render(); }));
+    
     $$("[data-bill-del]").forEach(i=>i.addEventListener('click', e=>{
       const id = e.target.dataset.billDel;
+      DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBillId !== id);
       DATA.bills[renderBills._month] = DATA.bills[renderBills._month].filter(b=>b.id!==id);
       queueSave(); render();
     }));
@@ -1288,6 +1344,41 @@ function setBill(id, field, val){
   const b = DATA.bills[m].find(x=>x.id===id);
   if(b){ b[field]=val; queueSave(); }
 }
+
+function syncBillToMoneyTx(billId) {
+  const m = renderBills._month;
+  const b = DATA.bills[m].find(x=>x.id===billId);
+  if(!b) return;
+
+  let txIndex = DATA.moneyTx.findIndex(t => t.linkedBillId === billId);
+
+  // We only sync an expense if it is paid, has a chosen account, and an amount > 0
+  if (b.paid && b.accountId && Number(b.amount) > 0) {
+    if (txIndex >= 0) {
+      DATA.moneyTx[txIndex].amount = Number(b.amount);
+      DATA.moneyTx[txIndex].accountId = b.accountId;
+      DATA.moneyTx[txIndex].desc = b.name || 'Bill Payment';
+      DATA.moneyTx[txIndex].date = b.date || new Date().toISOString().slice(0,10);
+    } else {
+      DATA.moneyTx.push({
+        id: uid(),
+        linkedBillId: billId,
+        date: b.date || new Date().toISOString().slice(0,10),
+        type: 'expense',
+        desc: b.name || 'Bill Payment',
+        accountId: b.accountId,
+        toAccountId: '',
+        amount: Number(b.amount)
+      });
+    }
+  } else {
+    if (txIndex >= 0) {
+      DATA.moneyTx.splice(txIndex, 1);
+    }
+  }
+  queueSave();
+}
+
 function setSub(id, field, val){
   const s = DATA.subscriptions.find(x=>x.id===id);
   if(s){ s[field]=val; queueSave(); }
