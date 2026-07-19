@@ -1050,18 +1050,20 @@ function renderSavings(){
   const goal = Number(p.goalAmount||0);
   const pct = goal>0 ? Math.min(100, Math.round(saved/goal*100)) : 0;
 
-  const availableMonths = getAvailableMonths(currentAppYear);
+  const currentMonthIdx = new Date().getMonth();
+  const currentYearNum = new Date().getFullYear();
+  const selectedYearNum = parseInt(currentAppYear);
 
-  if(availableMonths.length === 0) {
-     return `<div class="empty-note" style="margin-top:20px;">This year is in the future. Come back closer to ${currentAppYear} to plan savings.</div>`;
-  }
-
-  const rows = availableMonths.map(m=>{
+  const rows = MONTHS.map((m, idx)=>{
     const plan = DATA.savingsPlans[currentAppYear][m];
-    return `<tr>
+    
+    // Future Check for locking editing
+    const isFuture = (selectedYearNum > currentYearNum) || (selectedYearNum === currentYearNum && idx > currentMonthIdx);
+    
+    return `<tr style="${isFuture ? 'opacity:0.4; pointer-events:none; filter:grayscale(1);' : ''}">
       <td>${m}</td>
-      <td><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0"></td>
-      <td style="text-align:center;"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''}></td>
+      <td><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
+      <td style="text-align:center;"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
       <td class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
     </tr>`;
   }).join('');
@@ -1103,7 +1105,7 @@ function renderSavings(){
       <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="hint" style="margin-top:12px;">Checking a month splits that amount across the two payouts in that month's Monthly Budget tab automatically.</div>
+    <div class="hint" style="margin-top:12px;">Checking a month splits that amount across the two payouts in that month's Monthly Budget tab automatically. Future months are locked until they arrive.</div>
   </div>
   `;
 }
@@ -1308,7 +1310,7 @@ function renderMonth(m){
   const payout1 = sal1Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   const payout2 = sal2Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   
-  // Logic to determine bill splits
+  // Parse Dates to determine distances for bills.
   const date1Str = sal1Txs.length ? sal1Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-15`;
   const date2Str = sal2Txs.length ? sal2Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-28`;
 
@@ -1321,7 +1323,15 @@ function renderMonth(m){
   let billDeduct1 = 0;
   let billDeduct2 = 0;
 
-  const paidBills = (DATA.bills[currentAppYear][m] || []).filter(b => b.paid && Number(b.amount) > 0);
+  // Retrieve all paid bills exactly matching THIS month and THIS year, regardless of the Bill Tracker tab they were added in.
+  let paidBills = [];
+  Object.keys(DATA.bills[currentAppYear] || {}).forEach(tabMonth => {
+    (DATA.bills[currentAppYear][tabMonth] || []).forEach(b => {
+      if (b.paid && Number(b.amount) > 0 && b.date && b.date.startsWith(prefix)) {
+        paidBills.push(b);
+      }
+    });
+  });
   
   // Assign bills to payouts based on distance
   paidBills.sort((a,b) => (a.date||'').localeCompare(b.date||'')).forEach(b => {
@@ -1336,20 +1346,20 @@ function renderMonth(m){
       const dist1 = Math.abs(bDate - d1);
       const dist2 = Math.abs(bDate - d2);
       
-      // Closer to P2
+      // If closer to Payout 2
       if (dist2 < dist1) {
-        // Can P2 afford it?
+        // Can Payout 2 afford it?
         if ((payout2 - spent2 - billDeduct2) >= amt) {
           billDeduct2 += amt;
         } else {
-          billDeduct1 += amt;
+          billDeduct1 += amt; // Fallback to Payout 1
         }
       } else {
-        // Closer to P1
+        // Closer to Payout 1
         billDeduct1 += amt;
       }
     } else {
-      // Dump to P1 if neither payout is logged yet
+      // Default to P1 if neither payout is logged yet
       billDeduct1 += amt;
     }
   });
@@ -1386,7 +1396,7 @@ function renderMonth(m){
   </div>
   <div class="hint" style="margin:6px 2px 0;">
     Savings of ${peso(savingsPlan.planned||0)} for ${m} (set in Savings Tracker) is split evenly across both payouts.<br>
-    ${paidBills.length > 0 ? `Paid bills totaling <b>${peso(billDeduct1 + billDeduct2)}</b> were automatically deducted (<b>${peso(billDeduct1)}</b> from 1st payout, <b>${peso(billDeduct2)}</b> from 2nd payout) based on dates.` : ''}
+    ${paidBills.length > 0 ? `Paid bills totaling <b style="color:var(--ink);">${peso(billDeduct1 + billDeduct2)}</b> were automatically deducted (<b style="color:var(--ink);">${peso(billDeduct1)}</b> from 1st payout, <b style="color:var(--ink);">${peso(billDeduct2)}</b> from 2nd payout) based on dates.` : ''}
   </div>
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
@@ -1619,6 +1629,7 @@ function attachHandlers(){
 }
 
 function setBill(id, field, val){
+  // Update bill logic to parse date accurately instead of relying on the active tab
   const m = renderBills._month;
   const b = DATA.bills[currentAppYear][m].find(x=>x.id===id);
   if(b){ b[field]=val; queueSave(); }
