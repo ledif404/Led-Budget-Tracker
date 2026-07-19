@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>The Ledger — Gen Z Budget Passbook</title>
+<title>The LEDger — Gen Z Budget Passbook</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
@@ -241,7 +241,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 <div id="authScreen" class="screen hidden">
   <div class="passbook">
     <div class="passbook-top">
-      <div class="eyebrow">The Ledger</div>
+      <div class="eyebrow">The LEDger</div>
       <h1 id="authTitle">Welcome back</h1>
       <p id="authSub">Log in to open your passbook.</p>
     </div>
@@ -269,8 +269,8 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 <div id="app">
   <aside class="sidebar">
     <div class="sb-brand">
-      <div class="eyebrow">Est. this year · PHP</div>
-      <h1>🌿 The Ledger</h1>
+      <div class="eyebrow">EST. 2026. +63</div>
+      <h1>🌿 The LEDger</h1>
     </div>
     <nav id="mainNav">
       <div class="nav-group">
@@ -314,6 +314,12 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_NAMES = {Jan:"January",Feb:"February",Mar:"March",Apr:"April",May:"May",Jun:"June",Jul:"July",Aug:"August",Sep:"September",Oct:"October",Nov:"November",Dec:"December"};
 
+// Formatter mapping null/0 smoothly for inputs to stop typing glitches
+function val(n) {
+  if (n === 0 || n === '0' || !n) return '';
+  return escapeHtml(String(n));
+}
+
 function peso(n){
   n = Number(n)||0;
   return "₱" + n.toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -356,10 +362,10 @@ function defaultData(){
 
 /* ---------------- Firebase bootstrap ---------------- */
 let firebaseApp=null, auth=null, db=null, currentUser=null;
-let DATA=null;               // working copy of the whole doc
+let DATA=null;               
 let saveTimer=null;
 let currentTab="dashboard";
-let currentMonth="Jan";
+let currentMonth = MONTHS[new Date().getMonth()];
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
@@ -404,8 +410,6 @@ $("#setupSaveBtn").addEventListener('click', ()=>{
   errEl.style.display="none";
   let config;
   try{
-    // Firebase's console gives you a JS object literal (unquoted keys), not strict JSON —
-    // grab everything between the first { and the matching last } and evaluate it as JS.
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if(start===-1 || end===-1 || end<start) throw new Error('no object found');
@@ -499,7 +503,7 @@ $("#logoutBtn").addEventListener('click', ()=>{
 function docRef(){ return db.collection('users').doc(currentUser.uid); }
 
 async function loadUserData(){
-  showScreen(null); // will flip to app below once loaded; show a light loading state via title
+  showScreen(null); 
   $("#tabContent").innerHTML = `<div class="empty-note">Opening your passbook…</div>`;
   document.querySelector('#app').style.display='flex';
   document.querySelector('#app').classList.add('active');
@@ -560,10 +564,15 @@ function flashSaved(){
 function buildMonthNav(){
   const grid = $("#monthGrid");
   grid.innerHTML = "";
-  MONTHS.forEach(m=>{
+  
+  const currentMonthIdx = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  MONTHS.forEach((m, idx)=>{
+    if (idx > currentMonthIdx) return; // Hide future months completely
     const chip = document.createElement('div');
     chip.className = "month-chip";
-    chip.textContent = m;
+    chip.textContent = `${m} ${currentYear}`;
     chip.dataset.month = m;
     chip.addEventListener('click', ()=>{ goTab('month', m); });
     grid.appendChild(chip);
@@ -595,7 +604,7 @@ function goTab(tab, month){
   if(tab==='month') currentMonth = month;
   setActiveNav(tab, month);
   if(tab==='month'){
-    $("#pageTitle").textContent = MONTH_NAMES[month] + " Budget";
+    $("#pageTitle").textContent = `${MONTH_NAMES[month]} ${new Date().getFullYear()} Budget`;
     $("#pageSub").textContent = "Plan each payout, needs, wants, and investments.";
   } else {
     $("#pageTitle").textContent = TITLES[tab][0];
@@ -621,9 +630,7 @@ function render(){
         focusState.selectionStart = active.selectionStart;
         focusState.selectionEnd = active.selectionEnd;
       }
-    } catch (e) {
-      // Some inputs like type=number or type=date don't support setSelectionRange
-    }
+    } catch (e) {}
   }
 
   if(currentTab==='dashboard') el.innerHTML = renderDashboard();
@@ -666,16 +673,23 @@ function totalSaved(){
 function idealMonthlySavings(){
   return Number(DATA.profile.monthlyIncome||0) * Number(DATA.profile.savingsRatio||0);
 }
+
+// Fixed metric: Uses genuine transactional logged income for the current year
 function yearIncome(){
-  return MONTHS.reduce((s,m)=> s + Number(DATA.monthlyBudget[m].payout1||0) + Number(DATA.monthlyBudget[m].payout2||0), 0);
+  const currentYear = new Date().getFullYear().toString();
+  return (DATA.moneyTx||[])
+    .filter(t => t.type === 'income' && t.date && t.date.startsWith(currentYear))
+    .reduce((s,t) => s + Number(t.amount||0), 0);
 }
-function monthExpenseTotals(m){
-  const mb = DATA.monthlyBudget[m];
-  const needs = mb.needs.reduce((s,i)=>s+Number(i.amount||0),0);
-  const wants = mb.wants.reduce((s,i)=>s+Number(i.amount||0),0);
-  const inv = mb.investments.reduce((s,i)=>s+Number(i.amount||0),0);
-  return {needs, wants, inv, total: needs+wants+inv};
+
+// Fixed metric: Uses genuine transactional logged expenses for the current year
+function yearExpenses(){
+  const currentYear = new Date().getFullYear().toString();
+  return (DATA.moneyTx||[])
+    .filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentYear))
+    .reduce((s,t) => s + Number(t.amount||0), 0);
 }
+
 function creditUsed(){
   let used = 0;
   (DATA.creditCard.transactions||[]).forEach(t=>{
@@ -692,7 +706,7 @@ function accountBalance(accId){
   (DATA.moneyTx||[]).forEach(t=>{
     const amt = Number(t.amount||0);
     if(t.type==='income' && t.accountId===accId) bal += amt;
-    else if(t.type==='expense' && t.accountId===accId) bal -= amt;
+    else if((t.type==='expense' || t.type==='investment') && t.accountId===accId) bal -= amt;
     else if(t.type==='transfer'){
       if(t.accountId===accId) bal -= amt;
       if(t.toAccountId===accId) bal += amt;
@@ -729,7 +743,7 @@ function renderAccounts(){
           <option value="other" ${a.type==='other'?'selected':''}>Other</option>
         </select>
       </div>
-      <div class="hint">Starting balance: <input type="number" class="mono" data-acc-start="${a.id}" value="${a.startingBalance||0}" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
+      <div class="hint">Starting balance: <input type="number" step="any" class="mono" data-acc-start="${a.id}" value="${val(a.startingBalance)}" placeholder="0" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
     </div>`;
   }).join('');
 
@@ -743,6 +757,7 @@ function renderAccounts(){
           <option value="income" ${t.type==='income'?'selected':''}>Income</option>
           <option value="expense" ${t.type==='expense'?'selected':''}>Expense</option>
           <option value="transfer" ${t.type==='transfer'?'selected':''}>Transfer</option>
+          <option value="investment" ${t.type==='investment'?'selected':''}>Investment</option>
         </select>
       </td>
       <td><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries"></td>
@@ -752,7 +767,7 @@ function renderAccounts(){
       <td>
         ${t.type==='transfer' ? `<select data-tx2-to="${t.id}"><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
       </td>
-      <td><input type="number" class="mono" data-tx2-amount="${t.id}" value="${t.amount||0}"></td>
+      <td><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
       <td style="text-align:right;"><button class="row-del" data-tx2-del="${t.id}">✕</button></td>
     </tr>`).join('');
 
@@ -783,7 +798,7 @@ function renderAccounts(){
 /* ---------------- Dashboard ---------------- */
 function renderDashboard(){
   const income = yearIncome();
-  const expensesYear = MONTHS.reduce((s,m)=> s+monthExpenseTotals(m).total, 0);
+  const expensesYear = yearExpenses();
   const saved = totalSaved();
   const goal = Number(DATA.profile.goalAmount||0);
   const goalPct = goal>0 ? Math.min(100, Math.round(saved/goal*100)) : 0;
@@ -830,16 +845,23 @@ function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g, c=>({'&':'&amp;
 
 function moneyHealthRows(){
   const p = DATA.profile;
-  const income = MONTHS.reduce((s,m)=> s + Number(DATA.monthlyBudget[m].payout1||0)+Number(DATA.monthlyBudget[m].payout2||0), 0);
-  const expenses = MONTHS.reduce((s,m)=> s + monthExpenseTotals(m).needs + monthExpenseTotals(m).wants, 0);
-  const saved = totalSaved();
-  const invested = MONTHS.reduce((s,m)=> s + monthExpenseTotals(m).inv, 0);
+  const income = yearIncome();
+  const expenses = yearExpenses();
+  const saved = totalSaved(); 
+  
+  const currentYear = new Date().getFullYear().toString();
+  const invested = (DATA.moneyTx||[])
+    .filter(t => t.type === 'investment' && t.date && t.date.startsWith(currentYear))
+    .reduce((s,t) => s + Number(t.amount||0), 0);
+
+  if(income===0) return `<div class="empty-note">Log your income in Accounts & Money Flow to see your health check.</div>`;
+
   const rows = [
     {name:"Savings", actualPct: income>0 ? saved/income : 0, targetPct: p.savingsRatio, good: (income>0 ? saved/income : 0) >= p.savingsRatio},
     {name:"Spending (needs + wants)", actualPct: income>0 ? expenses/income : 0, targetPct: p.spendingRatio, good: (income>0 ? expenses/income : 0) <= p.spendingRatio},
     {name:"Investing", actualPct: income>0 ? invested/income : 0, targetPct: p.investingRatio, good: (income>0 ? invested/income : 0) >= p.investingRatio},
   ];
-  if(income===0) return `<div class="empty-note">Log payouts in your Monthly Budget tabs to see your health check.</div>`;
+  
   return rows.map(r=>`
     <div class="health-row">
       <div>
@@ -858,11 +880,14 @@ function renderSavings(){
   const goal = Number(p.goalAmount||0);
   const pct = goal>0 ? Math.min(100, Math.round(saved/goal*100)) : 0;
 
-  const rows = MONTHS.map(m=>{
+  const currentMonthIdx = new Date().getMonth();
+  const visibleMonths = MONTHS.slice(0, currentMonthIdx + 1);
+
+  const rows = visibleMonths.map(m=>{
     const plan = DATA.savingsPlans[m];
     return `<tr>
       <td>${m}</td>
-      <td><input type="number" class="mono" data-savings-planned="${m}" value="${plan.planned||0}" placeholder="0"></td>
+      <td><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0"></td>
       <td style="text-align:center;"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''}></td>
       <td class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
     </tr>`;
@@ -872,11 +897,11 @@ function renderSavings(){
   <div class="grid cols-3">
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Average net income / month</label>
-      <input type="number" id="incomeInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${p.monthlyIncome||0}">
+      <input type="number" step="any" id="incomeInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(p.monthlyIncome)}" placeholder="0">
     </div>
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Savings ratio (60/20/20 rule)</label><br>
-      <input type="number" id="savingsRatioInput" step="0.01" style="width:70px;font-size:16px;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;" value="${p.savingsRatio}"> <span style="color:var(--ink-soft);">→ ${Math.round(p.savingsRatio*100)}%</span>
+      <input type="number" step="any" id="savingsRatioInput" style="width:70px;font-size:16px;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;" value="${p.savingsRatio}"> <span style="color:var(--ink-soft);">→ ${Math.round(p.savingsRatio*100)}%</span>
       <div class="hint">Ideal monthly saving: <b>${peso(ideal)}</b></div>
     </div>
     <div class="card">
@@ -894,7 +919,7 @@ function renderSavings(){
       </div>
       <div>
         <label style="font-size:11px;color:var(--ink-soft);">Goal amount</label><br>
-        <input type="number" id="goalAmountInput" class="mono" style="width:140px;border:1.5px solid var(--line);border-radius:8px;padding:8px;" value="${p.goalAmount||0}">
+        <input type="number" step="any" id="goalAmountInput" class="mono" style="width:140px;border:1.5px solid var(--line);border-radius:8px;padding:8px;" value="${val(p.goalAmount)}" placeholder="0">
       </div>
     </div>
   </div>
@@ -912,9 +937,17 @@ function renderSavings(){
 
 /* ---------------- Bills Tracker ---------------- */
 function renderBills(){
-  const activeMonth = renderBills._month || currentThisMonth();
+  const currentMonthIdx = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const visibleMonths = MONTHS.slice(0, currentMonthIdx + 1);
+  
+  let activeMonth = renderBills._month || MONTHS[currentMonthIdx];
+  if (!visibleMonths.includes(activeMonth)) {
+    activeMonth = visibleMonths[visibleMonths.length - 1];
+  }
   renderBills._month = activeMonth;
-  const tabs = MONTHS.map(m=>`<button data-bill-month-tab="${m}" class="${m===activeMonth?'active':''}">${m}</button>`).join('');
+
+  const tabs = visibleMonths.map(m=>`<button data-bill-month-tab="${m}" class="${m===activeMonth?'active':''}">${m} ${currentYear}</button>`).join('');
   const list = DATA.bills[activeMonth] || [];
   const paid = list.filter(b=>b.paid).length;
   const pct = list.length ? Math.round(paid/list.length*100) : 0;
@@ -925,7 +958,7 @@ function renderBills(){
       <td>${idx+1}</td>
       <td><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
       <td><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
-      <td><input type="number" class="mono" data-bill-amount="${b.id}" value="${b.amount||0}"></td>
+      <td><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
       <td>
         <select data-bill-account="${b.id}">
           <option value="">—</option>
@@ -939,7 +972,7 @@ function renderBills(){
   const subRows = (DATA.subscriptions||[]).map((s,idx)=>`
     <tr>
       <td><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
-      <td><input type="number" class="mono" data-sub-amount="${s.id}" value="${s.amount||0}"></td>
+      <td><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
       <td style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
     </tr>`).join('');
   const subTotal = (DATA.subscriptions||[]).reduce((s,i)=>s+Number(i.amount||0),0);
@@ -1004,7 +1037,7 @@ function renderCredit(){
           <option value="payment" ${t.type==='payment'?'selected':''}>Payment</option>
         </select>
       </td>
-      <td><input type="number" class="mono" data-tx-amount="${t.id}" value="${t.amount||0}"></td>
+      <td><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
       <td style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
     </tr>`).join('');
 
@@ -1012,7 +1045,7 @@ function renderCredit(){
   <div class="grid cols-3">
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Credit limit</label>
-      <input type="number" id="ccLimitInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${limit}">
+      <input type="number" step="any" id="ccLimitInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(limit)}" placeholder="0">
     </div>
     <div class="card stat-card ${pct>80?'warn':'good'}"><div class="label">Available credit</div><div class="num">${pesoShort(available)}</div></div>
     <div class="card stat-card ${pct>80?'warn':''}"><div class="label">Used (${pct}%)</div><div class="num">${pesoShort(used)}</div></div>
@@ -1048,9 +1081,9 @@ function renderSettings(){
   <div class="grid cols-2">
     <div class="card">
       <h3>Budgeting ratios</h3>
-      <div class="field"><label>Savings %</label><input type="number" step="1" id="setSavings" value="${Math.round(p.savingsRatio*100)}"></div>
-      <div class="field"><label>Spending (needs + wants) %</label><input type="number" step="1" id="setSpending" value="${Math.round(p.spendingRatio*100)}"></div>
-      <div class="field"><label>Investing %</label><input type="number" step="1" id="setInvesting" value="${Math.round(p.investingRatio*100)}"></div>
+      <div class="field"><label>Savings %</label><input type="number" step="any" id="setSavings" value="${Math.round(p.savingsRatio*100)}"></div>
+      <div class="field"><label>Spending (needs + wants) %</label><input type="number" step="any" id="setSpending" value="${Math.round(p.spendingRatio*100)}"></div>
+      <div class="field"><label>Investing %</label><input type="number" step="any" id="setInvesting" value="${Math.round(p.investingRatio*100)}"></div>
       <div class="hint">These power the Money Health Checker on your dashboard. Default follows the 60/20/20 rule.</div>
     </div>
     <div class="card">
@@ -1073,7 +1106,7 @@ function renderMonth(m){
     return list.map(item=>`
       <tr>
         <td><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item"></td>
-        <td><input type="number" class="mono" data-item-amount="${key}:${item.id}" value="${item.amount||0}"></td>
+        <td><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
         <td><input type="text" data-item-method="${key}:${item.id}" value="${escapeHtml(item.method||'')}" placeholder="e.g. GCash"></td>
         <td>
           <select data-item-payout="${key}:${item.id}">
@@ -1099,11 +1132,11 @@ function renderMonth(m){
   <div class="payout-cols">
     <div class="card">
       <h3>1st Payout</h3>
-      <input type="number" class="mono" data-payout="1" style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;" value="${payout1}">
+      <input type="number" step="any" class="mono" data-payout="1" style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;" value="${val(payout1)}" placeholder="0">
     </div>
     <div class="card">
       <h3>2nd Payout</h3>
-      <input type="number" class="mono" data-payout="2" style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;" value="${payout2}">
+      <input type="number" step="any" class="mono" data-payout="2" style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;" value="${val(payout2)}" placeholder="0">
     </div>
   </div>
 
@@ -1140,28 +1173,7 @@ function renderMonth(m){
     <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="5" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
-
-  <div class="section-title">Money Health Checker</div>
-  <div class="card">${moneyHealthRowsForMonth(m, totalIncome, totalExp, savingsPlan.planned||0, totalInv)}</div>
-
-  <div class="section-title">Cash flow — ${MONTH_NAMES[m]}</div>
-  <div class="card"><canvas id="monthCashFlow" height="70"></canvas></div>
   `;
-}
-
-function moneyHealthRowsForMonth(m, income, expenses, saved, invested){
-  const p = DATA.profile;
-  if(income===0) return `<div class="empty-note">Log your payouts above to see this month's health check.</div>`;
-  const rows = [
-    {name:"Savings", actual: saved/income, target: p.savingsRatio, good: (saved/income) >= p.savingsRatio},
-    {name:"Spending", actual: expenses/income, target: p.spendingRatio, good: (expenses/income) <= p.spendingRatio},
-    {name:"Investing", actual: invested/income, target: p.investingRatio, good: (invested/income) >= p.investingRatio},
-  ];
-  return rows.map(r=>`
-    <div class="health-row">
-      <div><div class="name">${r.name}</div><div class="detail">Target ${Math.round(r.target*100)}% · Actual ${Math.round(r.actual*100)}%</div></div>
-      <span class="badge ${r.good?'ok':'warn'}">${r.good?'Healthy':'Needs improvement'}</span>
-    </div>`).join('');
 }
 
 /* ---------------- Event wiring after render ---------------- */
@@ -1180,7 +1192,7 @@ function attachHandlers(){
     $$("[data-bill-account]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billAccount,'accountId',e.target.value); syncBillToMoneyTx(e.target.dataset.billAccount); render(); }));
     $$("[data-bill-paid]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billPaid,'paid',e.target.checked); syncBillToMoneyTx(e.target.dataset.billPaid); render(); }));
     
-    // THE FIX: Listen for input to save data silently, but only re-render the page on "change" (when you blur/press enter).
+    // Typing won't rerender, only blur/enter (change) will rerender.
     $$("[data-bill-amount]").forEach(i=>{
       i.addEventListener('input', e=>{ setBill(e.target.dataset.billAmount,'amount',Number(e.target.value)); syncBillToMoneyTx(e.target.dataset.billAmount); });
       i.addEventListener('change', ()=>render());
@@ -1198,7 +1210,6 @@ function attachHandlers(){
     });
     $$("[data-sub-name]").forEach(i=>i.addEventListener('input', e=>{ setSub(e.target.dataset.subName,'name',e.target.value); }));
     
-    // THE FIX applied here too
     $$("[data-sub-amount]").forEach(i=>{
       i.addEventListener('input', e=>{ setSub(e.target.dataset.subAmount,'amount',Number(e.target.value)); });
       i.addEventListener('change', ()=>render());
@@ -1211,7 +1222,6 @@ function attachHandlers(){
     $("#notesInput")?.addEventListener('input', e=>{ DATA.notes = e.target.value; queueSave(); });
   }
   if(currentTab==='savings'){
-    // THE FIX applied to all numeric inputs below
     $("#incomeInput")?.addEventListener('input', e=>{ DATA.profile.monthlyIncome = Number(e.target.value); queueSave(); });
     $("#incomeInput")?.addEventListener('change', ()=>render());
     $("#savingsRatioInput")?.addEventListener('input', e=>{ DATA.profile.savingsRatio = Number(e.target.value); queueSave(); });
@@ -1245,7 +1255,6 @@ function attachHandlers(){
     $$("[data-tx-desc]").forEach(i=>i.addEventListener('input', e=>setTx(e.target.dataset.txDesc,'desc',e.target.value)));
     $$("[data-tx-type]").forEach(i=>i.addEventListener('change', e=>{ setTx(e.target.dataset.txType,'type',e.target.value); render(); }));
     
-    // THE FIX applied
     $$("[data-tx-amount]").forEach(i=>{
       i.addEventListener('input', e=>{ setTx(e.target.dataset.txAmount,'amount',Number(e.target.value)); });
       i.addEventListener('change', ()=>render());
@@ -1270,7 +1279,6 @@ function attachHandlers(){
       if(acc){ acc.type=e.target.value; queueSave(); render(); }
     }));
     
-    // THE FIX applied
     $$("[data-acc-start]").forEach(i=>{
       i.addEventListener('input', e=>{
         const acc = DATA.accounts.find(a=>a.id===e.target.dataset.accStart);
@@ -1296,7 +1304,6 @@ function attachHandlers(){
     $$("[data-tx2-account]").forEach(i=>i.addEventListener('change', e=>{ setMoneyTx(e.target.dataset.tx2Account,'accountId',e.target.value); render(); }));
     $$("[data-tx2-to]").forEach(i=>i.addEventListener('change', e=>{ setMoneyTx(e.target.dataset.tx2To,'toAccountId',e.target.value); render(); }));
     
-    // THE FIX applied here for Money flow amounts
     $$("[data-tx2-amount]").forEach(i=>{
       i.addEventListener('input', e=>{ setMoneyTx(e.target.dataset.tx2Amount,'amount',Number(e.target.value)); });
       i.addEventListener('change', ()=>render());
@@ -1318,7 +1325,6 @@ function attachHandlers(){
   }
   if(currentTab==='month'){
     const m = currentMonth;
-    // THE FIX applied
     $$("[data-payout]").forEach(i=>{
       i.addEventListener('input', e=>{
         const key = e.target.dataset.payout==='1' ? 'payout1':'payout2';
@@ -1337,7 +1343,6 @@ function attachHandlers(){
       setItem(m,key,id,'name',e.target.value);
     }));
     
-    // THE FIX applied
     $$("[data-item-amount]").forEach(i=>{
       i.addEventListener('input', e=>{
         const [key,id] = e.target.dataset.itemAmount.split(':');
@@ -1361,8 +1366,6 @@ function attachHandlers(){
     }));
   }
 
-  // Charts are drawn last and wrapped in try/catch so a Chart.js hiccup
-  // (e.g. a slow CDN load) can never block the button wiring above.
   try{
     if(currentTab==='dashboard'){
       const list = DATA.bills[currentThisMonth()]||[];
@@ -1380,9 +1383,6 @@ function attachHandlers(){
     if(currentTab==='credit'){
       drawDonut('ccDonut', creditUsed(), Math.max(0,Number(DATA.creditCard.limit||0)-creditUsed()), true);
     }
-    if(currentTab==='month'){
-      drawMonthCashFlow('monthCashFlow', currentMonth);
-    }
   }catch(e){ console.warn('chart draw skipped', e); }
 }
 
@@ -1399,7 +1399,6 @@ function syncBillToMoneyTx(billId) {
 
   let txIndex = DATA.moneyTx.findIndex(t => t.linkedBillId === billId);
 
-  // We only sync an expense if it is paid, has a chosen account, and an amount > 0
   if (b.paid && b.accountId && Number(b.amount) > 0) {
     if (txIndex >= 0) {
       DATA.moneyTx[txIndex].amount = Number(b.amount);
@@ -1460,29 +1459,33 @@ function drawCashFlowChart(canvasId){
   const el = document.getElementById(canvasId);
   if(!el) return;
   if(chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
-  const income = MONTHS.map(m=> Number(DATA.monthlyBudget[m].payout1||0)+Number(DATA.monthlyBudget[m].payout2||0));
-  const expenses = MONTHS.map(m=> monthExpenseTotals(m).total);
+  
+  const currentMonthIdx = new Date().getMonth();
+  const currentYear = new Date().getFullYear().toString();
+  const visibleMonths = MONTHS.slice(0, currentMonthIdx + 1);
+
+  const incomeData = visibleMonths.map((m, i) => {
+    return (DATA.moneyTx||[]).filter(t => {
+      if (t.type !== 'income' || !t.date || !t.date.startsWith(currentYear)) return false;
+      return parseInt(t.date.split('-')[1], 10) - 1 === i;
+    }).reduce((s, t) => s + Number(t.amount||0), 0);
+  });
+
+  const expenseData = visibleMonths.map((m, i) => {
+    return (DATA.moneyTx||[]).filter(t => {
+      if (t.type !== 'expense' || !t.date || !t.date.startsWith(currentYear)) return false;
+      return parseInt(t.date.split('-')[1], 10) - 1 === i;
+    }).reduce((s, t) => s + Number(t.amount||0), 0);
+  });
+
   chartRegistry[canvasId] = new Chart(el, {
     type:'bar',
-    data:{ labels:MONTHS, datasets:[
-      {label:'Income', data:income, backgroundColor:'#1f6b45', borderRadius:4},
-      {label:'Expenses', data:expenses, backgroundColor:'#bf9b30', borderRadius:4},
+    data:{ labels:visibleMonths, datasets:[
+      {label:'Income', data:incomeData, backgroundColor:'#1f6b45', borderRadius:4},
+      {label:'Expenses', data:expenseData, backgroundColor:'#a8402a', borderRadius:4},
     ]},
     options:{responsive:true, plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}},
       scales:{y:{ticks:{callback:v=>pesoShort(v)}}, x:{grid:{display:false}}}}
-  });
-}
-function drawMonthCashFlow(canvasId, m){
-  const el = document.getElementById(canvasId);
-  if(!el) return;
-  if(chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
-  const mb = DATA.monthlyBudget[m];
-  const income = Number(mb.payout1||0)+Number(mb.payout2||0);
-  const exp = monthExpenseTotals(m).total;
-  chartRegistry[canvasId] = new Chart(el, {
-    type:'bar',
-    data:{ labels:['Money in','Money out'], datasets:[{data:[income,exp], backgroundColor:['#1f6b45','#a8402a'], borderRadius:6}]},
-    options:{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{ticks:{callback:v=>pesoShort(v)}}}}
   });
 }
 
