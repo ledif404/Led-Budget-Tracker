@@ -457,7 +457,7 @@ function boot(){
   });
 }
 
-/* ---------------- Settings & Auth Handlers (Skipped in comments for brevity) ---------------- */
+/* ---------------- Settings & Auth Handlers ---------------- */
 $("#setupSaveBtn").addEventListener('click', ()=>{
   const raw = $("#fbConfigInput").value.trim();
   const errEl = $("#setupError");
@@ -1302,18 +1302,62 @@ function renderMonth(m){
   const mIdxStr = String(MONTHS.indexOf(m) + 1).padStart(2, '0');
   const prefix = `${currentAppYear}-${mIdxStr}`;
   
-  const payout1 = (DATA.moneyTx||[])
-    .filter(t => t.type === 'salary1' && t.date && t.date.startsWith(prefix))
-    .reduce((s, t) => s + Number(t.amount||0), 0);
-    
-  const payout2 = (DATA.moneyTx||[])
-    .filter(t => t.type === 'salary2' && t.date && t.date.startsWith(prefix))
-    .reduce((s, t) => s + Number(t.amount||0), 0);
+  const sal1Txs = (DATA.moneyTx||[]).filter(t => t.type === 'salary1' && t.date && t.date.startsWith(prefix));
+  const sal2Txs = (DATA.moneyTx||[]).filter(t => t.type === 'salary2' && t.date && t.date.startsWith(prefix));
 
-  const left1 = payout1 - savingsPerPayout - totalForPayout(mb.needs,1) - totalForPayout(mb.wants,1) - totalForPayout(mb.investments,1);
-  const left2 = payout2 - savingsPerPayout - totalForPayout(mb.needs,2) - totalForPayout(mb.wants,2) - totalForPayout(mb.investments,2);
-  const totalIncome = payout1+payout2;
-  const totalExp = totalNeeds+totalWants;
+  const payout1 = sal1Txs.reduce((s, t) => s + Number(t.amount||0), 0);
+  const payout2 = sal2Txs.reduce((s, t) => s + Number(t.amount||0), 0);
+  
+  // Logic to determine bill splits
+  const date1Str = sal1Txs.length ? sal1Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-15`;
+  const date2Str = sal2Txs.length ? sal2Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-28`;
+
+  const d1 = new Date(date1Str).getTime();
+  const d2 = new Date(date2Str).getTime();
+
+  let spent1 = savingsPerPayout + totalForPayout(mb.needs,1) + totalForPayout(mb.wants,1) + totalForPayout(mb.investments,1);
+  let spent2 = savingsPerPayout + totalForPayout(mb.needs,2) + totalForPayout(mb.wants,2) + totalForPayout(mb.investments,2);
+
+  let billDeduct1 = 0;
+  let billDeduct2 = 0;
+
+  const paidBills = (DATA.bills[currentAppYear][m] || []).filter(b => b.paid && Number(b.amount) > 0);
+  
+  // Assign bills to payouts based on distance
+  paidBills.sort((a,b) => (a.date||'').localeCompare(b.date||'')).forEach(b => {
+    const bDate = new Date(b.date || `${prefix}-01`).getTime();
+    const amt = Number(b.amount);
+
+    if (payout1 > 0 && payout2 === 0) {
+      billDeduct1 += amt;
+    } else if (payout2 > 0 && payout1 === 0) {
+      billDeduct2 += amt;
+    } else if (payout1 > 0 && payout2 > 0) {
+      const dist1 = Math.abs(bDate - d1);
+      const dist2 = Math.abs(bDate - d2);
+      
+      // Closer to P2
+      if (dist2 < dist1) {
+        // Can P2 afford it?
+        if ((payout2 - spent2 - billDeduct2) >= amt) {
+          billDeduct2 += amt;
+        } else {
+          billDeduct1 += amt;
+        }
+      } else {
+        // Closer to P1
+        billDeduct1 += amt;
+      }
+    } else {
+      // Dump to P1 if neither payout is logged yet
+      billDeduct1 += amt;
+    }
+  });
+
+  const left1 = payout1 - spent1 - billDeduct1;
+  const left2 = payout2 - spent2 - billDeduct2;
+  const totalIncome = payout1 + payout2;
+  const totalExp = totalNeeds + totalWants + billDeduct1 + billDeduct2;
 
   return `
   <div class="payout-cols">
@@ -1340,7 +1384,10 @@ function renderMonth(m){
     <div class="card stat-card ${left1<0?'warn':'good'}"><div class="label">Amount left · 1st payout</div><div class="num">${peso(left1)}</div></div>
     <div class="card stat-card ${left2<0?'warn':'good'}"><div class="label">Amount left · 2nd payout</div><div class="num">${peso(left2)}</div></div>
   </div>
-  <div class="hint" style="margin:6px 2px 0;">Savings of ${peso(savingsPlan.planned||0)} for ${m} (set in Savings Tracker) is split evenly across both payouts.</div>
+  <div class="hint" style="margin:6px 2px 0;">
+    Savings of ${peso(savingsPlan.planned||0)} for ${m} (set in Savings Tracker) is split evenly across both payouts.<br>
+    ${paidBills.length > 0 ? `Paid bills totaling <b>${peso(billDeduct1 + billDeduct2)}</b> were automatically deducted (<b>${peso(billDeduct1)}</b> from 1st payout, <b>${peso(billDeduct2)}</b> from 2nd payout) based on dates.` : ''}
+  </div>
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
   <div class="card">
