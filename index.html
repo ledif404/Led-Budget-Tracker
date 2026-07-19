@@ -377,7 +377,7 @@ function ensureYearDataExists(data, year) {
     data.savingsPlans[year] = {};
     data.bills[year] = {};
     MONTHS.forEach(m => {
-      data.monthlyBudget[year][m] = {payout1:0, payout2:0, needs:[], wants:[], investments:[]};
+      data.monthlyBudget[year][m] = {needs:[], wants:[], investments:[]};
       data.savingsPlans[year][m] = {planned:0, saved:false};
       data.bills[year][m] = [];
     });
@@ -581,7 +581,6 @@ function mergeDefaults(data){
   const def = defaultData();
   const currentY = new Date().getFullYear().toString();
   
-  // Safe Migration: If they have older flat data (no nested year)
   if (data.monthlyBudget && typeof data.monthlyBudget['Jan'] === 'object' && !data.monthlyBudget['2026']) {
      let oldMB = Object.assign({}, data.monthlyBudget);
      let oldSP = Object.assign({}, data.savingsPlans);
@@ -793,7 +792,7 @@ function idealMonthlySavings(){
 
 function yearIncome(){
   return (DATA.moneyTx||[])
-    .filter(t => t.type === 'income' && t.date && t.date.startsWith(currentAppYear))
+    .filter(t => ['income', 'salary1', 'salary2'].includes(t.type) && t.date && t.date.startsWith(currentAppYear))
     .reduce((s,t) => s + Number(t.amount||0), 0);
 }
 
@@ -826,7 +825,7 @@ function accountBalance(accId){
   let bal = Number(acc ? acc.startingBalance||0 : 0);
   (DATA.moneyTx||[]).forEach(t=>{
     const amt = Number(t.amount||0);
-    if(t.type==='income' && t.accountId===accId) bal += amt;
+    if(['income', 'salary1', 'salary2'].includes(t.type) && t.accountId===accId) bal += amt;
     else if((t.type==='expense' || t.type==='investment') && t.accountId===accId) bal -= amt;
     else if(t.type==='transfer'){
       if(t.accountId===accId) bal -= amt;
@@ -870,6 +869,8 @@ function renderAccounts(){
       <td>
         <select data-tx2-type="${t.id}">
           <option value="income" ${t.type==='income'?'selected':''}>Income</option>
+          <option value="salary1" ${t.type==='salary1'?'selected':''}>Salary - 1st Payout</option>
+          <option value="salary2" ${t.type==='salary2'?'selected':''}>Salary - 2nd Payout</option>
           <option value="expense" ${t.type==='expense'?'selected':''}>Expense</option>
           <option value="transfer" ${t.type==='transfer'?'selected':''}>Transfer</option>
           <option value="investment" ${t.type==='investment'?'selected':''}>Investment</option>
@@ -915,7 +916,7 @@ function renderCalendar() {
   const y = parseInt(calendarYear);
   const mIdx = MONTHS.indexOf(calendarMonth);
   const daysInMonth = new Date(y, mIdx + 1, 0).getDate();
-  const firstDay = new Date(y, mIdx, 1).getDay(); // 0 (Sun) to 6 (Sat)
+  const firstDay = new Date(y, mIdx, 1).getDay();
   
   const monthTxs = (DATA.moneyTx||[]).filter(t => {
      if(!t.date) return false;
@@ -931,8 +932,9 @@ function renderCalendar() {
      const dayTxs = monthTxs.filter(t => t.date === dateStr);
      
      let txHtml = dayTxs.map(t => {
-       let typeClass = t.type==='income' ? 'inc' : (t.type==='expense' ? 'exp' : 'trs');
-       let prefix = t.type==='income' ? '+' : (t.type==='expense' ? '-' : '⇄');
+       let isIncome = ['income', 'salary1', 'salary2'].includes(t.type);
+       let typeClass = isIncome ? 'inc' : (t.type==='expense' ? 'exp' : 'trs');
+       let prefix = isIncome ? '+' : (t.type==='expense' ? '-' : '⇄');
        return `<div class="cal-tx ${typeClass}" title="${escapeHtml(t.desc)}: ${pesoShort(t.amount)}">
          <span>${prefix}</span> <span>${pesoShort(t.amount)}</span> <span style="opacity:0.7;font-weight:400;margin-left:auto;">${escapeHtml(t.desc)}</span>
        </div>`;
@@ -1295,7 +1297,19 @@ function renderMonth(m){
   function totalForPayout(list,p){ return list.filter(i=>Number(i.payout)===p).reduce((s,i)=>s+Number(i.amount||0),0); }
 
   const totalNeeds = totalFor(mb.needs), totalWants = totalFor(mb.wants), totalInv = totalFor(mb.investments);
-  const payout1 = Number(mb.payout1||0), payout2 = Number(mb.payout2||0);
+  
+  // Dynamically calculate payouts via actual Accounts & Money Flow logs.
+  const mIdxStr = String(MONTHS.indexOf(m) + 1).padStart(2, '0');
+  const prefix = `${currentAppYear}-${mIdxStr}`;
+  
+  const payout1 = (DATA.moneyTx||[])
+    .filter(t => t.type === 'salary1' && t.date && t.date.startsWith(prefix))
+    .reduce((s, t) => s + Number(t.amount||0), 0);
+    
+  const payout2 = (DATA.moneyTx||[])
+    .filter(t => t.type === 'salary2' && t.date && t.date.startsWith(prefix))
+    .reduce((s, t) => s + Number(t.amount||0), 0);
+
   const left1 = payout1 - savingsPerPayout - totalForPayout(mb.needs,1) - totalForPayout(mb.wants,1) - totalForPayout(mb.investments,1);
   const left2 = payout2 - savingsPerPayout - totalForPayout(mb.needs,2) - totalForPayout(mb.wants,2) - totalForPayout(mb.investments,2);
   const totalIncome = payout1+payout2;
@@ -1305,11 +1319,13 @@ function renderMonth(m){
   <div class="payout-cols">
     <div class="card">
       <h3>1st Payout</h3>
-      <input type="number" step="any" class="mono" data-payout="1" style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;" value="${val(payout1)}" placeholder="0">
+      <input type="text" class="mono" readonly style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;background:transparent;color:var(--ink);cursor:not-allowed;" value="${peso(payout1)}">
+      <div class="hint" style="margin-top:6px;">Added via Accounts &amp; Money Flow</div>
     </div>
     <div class="card">
       <h3>2nd Payout</h3>
-      <input type="number" step="any" class="mono" data-payout="2" style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;" value="${val(payout2)}" placeholder="0">
+      <input type="text" class="mono" readonly style="font-size:20px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;background:transparent;color:var(--ink);cursor:not-allowed;" value="${peso(payout2)}">
+      <div class="hint" style="margin-top:6px;">Added via Accounts &amp; Money Flow</div>
     </div>
   </div>
 
@@ -1369,7 +1385,6 @@ function attachHandlers(){
     $$("[data-bill-account]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billAccount,'accountId',e.target.value); syncBillToMoneyTx(e.target.dataset.billAccount); render(); }));
     $$("[data-bill-paid]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billPaid,'paid',e.target.checked); syncBillToMoneyTx(e.target.dataset.billPaid); render(); }));
     
-    // Typing won't rerender, only blur/enter (change) will rerender.
     $$("[data-bill-amount]").forEach(i=>{
       i.addEventListener('input', e=>{ setBill(e.target.dataset.billAmount,'amount',Number(e.target.value)); syncBillToMoneyTx(e.target.dataset.billAmount); });
       i.addEventListener('change', ()=>render());
@@ -1502,14 +1517,6 @@ function attachHandlers(){
   }
   if(currentTab==='month'){
     const m = currentMonth;
-    $$("[data-payout]").forEach(i=>{
-      i.addEventListener('input', e=>{
-        const key = e.target.dataset.payout==='1' ? 'payout1':'payout2';
-        DATA.monthlyBudget[currentAppYear][m][key] = Number(e.target.value);
-        queueSave();
-      });
-      i.addEventListener('change', ()=>render());
-    });
     $$("[data-add-item]").forEach(btn=>btn.addEventListener('click', ()=>{
       const key = btn.dataset.addItem;
       DATA.monthlyBudget[currentAppYear][m][key].push({id:uid(), name:'', amount:0, method:'', payout:1});
@@ -1643,7 +1650,7 @@ function drawCashFlowChart(canvasId){
   const incomeData = visibleMonths.map((m) => {
     const mIdx = MONTHS.indexOf(m);
     return (DATA.moneyTx||[]).filter(t => {
-      if (t.type !== 'income' || !t.date || !t.date.startsWith(currentAppYear)) return false;
+      if (!['income', 'salary1', 'salary2'].includes(t.type) || !t.date || !t.date.startsWith(currentAppYear)) return false;
       return parseInt(t.date.split('-')[1], 10) - 1 === mIdx;
     }).reduce((s, t) => s + Number(t.amount||0), 0);
   });
