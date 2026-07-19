@@ -106,6 +106,9 @@ a{color:var(--green-700);}
 .sb-brand h1{font-size:20px;margin:4px 0 0;font-weight:600;}
 .nav-group{margin-bottom:6px;}
 .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:rgba(245,240,227,0.45);padding:14px 20px 6px;font-weight:600;}
+.nav-year-select{background:transparent;color:var(--gold);border:none;font-weight:700;cursor:pointer;outline:none;font-size:11px;}
+.nav-year-select option{color:var(--ink);}
+
 .nav-tab{
   display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13.5px;font-weight:500;
   color:rgba(245,240,227,0.82);border-left:3px solid transparent;position:relative;
@@ -116,10 +119,11 @@ a{color:var(--green-700);}
 .month-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:4px 14px 10px;}
 .month-chip{
   padding:7px 4px;text-align:center;font-size:12px;border-radius:6px;color:rgba(245,240,227,0.75);
-  border:1px solid transparent;
+  border:1px solid transparent; cursor:pointer;
 }
-.month-chip:hover{background:rgba(255,255,255,0.06);}
+.month-chip:hover:not(.disabled){background:rgba(255,255,255,0.06);}
 .month-chip.active{background:var(--gold);color:var(--green-950);font-weight:700;}
+.month-chip.disabled{opacity:0.3;cursor:not-allowed;text-decoration:line-through;}
 .sb-footer{margin-top:auto;padding:14px 20px 0;border-top:1px solid rgba(255,255,255,0.1);}
 .sb-footer button{width:100%;justify-content:flex-start;}
 
@@ -188,6 +192,32 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .health-row .name{font-weight:600;font-size:13.5px;}
 .health-row .detail{font-size:12px;color:var(--ink-soft);margin-top:2px;}
 
+/* Calendar styles */
+.cal-select-wrap { display: flex; gap: 8px; margin-bottom: 16px; align-items:center; }
+.cal-select { padding: 6px 10px; border-radius: 6px; border: 1.5px solid var(--line); font-weight: 600; font-family: inherit; font-size: 14px; background:#fff;}
+.calendar-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  background: var(--line); gap: 1px;
+}
+.cal-head {
+  background: var(--paper-2); color: var(--ink-soft); text-align: center; font-weight: 700;
+  font-size: 11px; text-transform: uppercase; padding: 8px 0;
+}
+.cal-cell {
+  background: #fff; min-height: 90px; padding: 6px; display: flex; flex-direction: column; gap: 4px;
+}
+.cal-cell.empty { background: #faf9f5; }
+.cal-date { font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 2px; }
+.cal-tx {
+  font-size: 10.5px; font-weight: 600; padding: 4px 6px; border-radius: 4px; 
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; gap: 4px; align-items: center;
+}
+.cal-tx.inc { background: #e3f0e6; color: var(--green-700); }
+.cal-tx.exp { background: #fbe6df; color: var(--red); }
+.cal-tx.trs { background: #f5f0e3; color: var(--gold); }
+
 .setup-config-box{background:#0e3b26;color:#e9e3cf;padding:12px 14px;border-radius:9px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.6;overflow-x:auto;white-space:pre;margin:10px 0;}
 .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--green-700);color:#fff;font-size:11px;font-weight:700;margin-right:8px;flex-shrink:0;}
 .step{display:flex;align-items:flex-start;margin-bottom:12px;font-size:13px;color:var(--ink-soft);}
@@ -199,7 +229,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .sidebar{position:relative;height:auto;width:100%;padding:14px 0;}
   .month-grid{display:none;}
   .month-grid.open{display:grid;}
-  .nav-group.months .nav-label{display:flex;justify-content:space-between;align-items:center;padding-right:20px;cursor:pointer;}
   .main{padding:18px 16px 50px;}
   .grid.cols-4{grid-template-columns:1fr 1fr;}
 }
@@ -241,7 +270,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 <div id="authScreen" class="screen hidden">
   <div class="passbook">
     <div class="passbook-top">
-      <div class="eyebrow">The LEDger</div>
+      <div class="eyebrow">EST. 2026. +63</div>
       <h1 id="authTitle">Welcome back</h1>
       <p id="authSub">Log in to open your passbook.</p>
     </div>
@@ -276,12 +305,22 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
       <div class="nav-group">
         <div class="nav-tab" data-tab="dashboard"><span class="dot"></span>Dashboard</div>
         <div class="nav-tab" data-tab="accounts"><span class="dot"></span>Accounts &amp; Money Flow</div>
+        <div class="nav-tab" data-tab="calendar"><span class="dot"></span>Monthly Transaction Overview</div>
         <div class="nav-tab" data-tab="savings"><span class="dot"></span>Savings Tracker</div>
         <div class="nav-tab" data-tab="bills"><span class="dot"></span>Bills Tracker</div>
         <div class="nav-tab" data-tab="credit"><span class="dot"></span>Credit Card Tracker</div>
       </div>
       <div class="nav-group months">
-        <div class="nav-label" id="monthsToggle">Monthly Budget ▾</div>
+        <div class="nav-label" style="display:flex; justify-content:space-between; align-items:center; padding-right:20px;">
+          <span id="monthsToggle" style="cursor:pointer;">Monthly Budget ▾</span>
+          <select id="sidebarYearSelect" class="nav-year-select">
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+            <option value="2029">2029</option>
+            <option value="2030">2030</option>
+          </select>
+        </div>
         <div class="month-grid open" id="monthGrid"></div>
       </div>
       <div class="nav-group">
@@ -307,14 +346,12 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 
 <script>
 /* =========================================================================
-   THE LEDGER — Gen Z Budget Passbook
-   Single-file app. Data model lives in Firestore: users/{uid} (one doc).
+   THE LEDger — Gen Z Budget Passbook
    ========================================================================= */
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_NAMES = {Jan:"January",Feb:"February",Mar:"March",Apr:"April",May:"May",Jun:"June",Jul:"July",Aug:"August",Sep:"September",Oct:"October",Nov:"November",Dec:"December"};
 
-// Formatter mapping null/0 smoothly for inputs to stop typing glitches
 function val(n) {
   if (n === 0 || n === '0' || !n) return '';
   return escapeHtml(String(n));
@@ -330,14 +367,26 @@ function pesoShort(n){
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 
+function ensureYearDataExists(data, year) {
+  if(!data.monthlyBudget) data.monthlyBudget = {};
+  if(!data.savingsPlans) data.savingsPlans = {};
+  if(!data.bills) data.bills = {};
+  
+  if(!data.monthlyBudget[year]) {
+    data.monthlyBudget[year] = {};
+    data.savingsPlans[year] = {};
+    data.bills[year] = {};
+    MONTHS.forEach(m => {
+      data.monthlyBudget[year][m] = {payout1:0, payout2:0, needs:[], wants:[], investments:[]};
+      data.savingsPlans[year][m] = {planned:0, saved:false};
+      data.bills[year][m] = [];
+    });
+  }
+}
+
 function defaultData(){
-  const savingsPlans = {}, bills = {}, monthlyBudget = {};
-  MONTHS.forEach(m=>{
-    savingsPlans[m] = {planned:0, saved:false};
-    bills[m] = [];
-    monthlyBudget[m] = {payout1:0, payout2:0, needs:[], wants:[], investments:[]};
-  });
-  return {
+  const currentY = new Date().getFullYear().toString();
+  const out = {
     profile:{
       displayName:"",
       monthlyIncome:0,
@@ -347,17 +396,19 @@ function defaultData(){
       goalName:"Emergency Fund",
       goalAmount:0
     },
-    savingsPlans,
-    bills,
+    savingsPlans:{},
+    bills:{},
     creditCard:{limit:0, transactions:[]},
     subscriptions:[],
-    monthlyBudget,
+    monthlyBudget:{},
     notes:"",
     accounts:[
       {id:uid(), name:"Cash", type:"cash", startingBalance:0}
     ],
     moneyTx:[]
   };
+  ensureYearDataExists(out, currentY);
+  return out;
 }
 
 /* ---------------- Firebase bootstrap ---------------- */
@@ -366,6 +417,9 @@ let DATA=null;
 let saveTimer=null;
 let currentTab="dashboard";
 let currentMonth = MONTHS[new Date().getMonth()];
+let currentAppYear = new Date().getFullYear().toString();
+let calendarMonth = currentMonth;
+let calendarYear = currentAppYear;
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
@@ -403,7 +457,7 @@ function boot(){
   });
 }
 
-/* ---------------- Setup screen ---------------- */
+/* ---------------- Settings & Auth Handlers (Skipped in comments for brevity) ---------------- */
 $("#setupSaveBtn").addEventListener('click', ()=>{
   const raw = $("#fbConfigInput").value.trim();
   const errEl = $("#setupError");
@@ -443,7 +497,6 @@ $("#changeConfigBtn").addEventListener('click', ()=>{
   location.reload();
 });
 
-/* ---------------- Auth screen ---------------- */
 let authMode = 'login';
 $("#authToggleBtn").addEventListener('click', ()=>{
   authMode = authMode==='login' ? 'signup' : 'login';
@@ -519,26 +572,42 @@ async function loadUserData(){
     console.error(e);
     DATA = defaultData();
   }
+  wireSidebarYear();
   buildMonthNav();
   goTab('dashboard');
 }
 
 function mergeDefaults(data){
   const def = defaultData();
+  const currentY = new Date().getFullYear().toString();
+  
+  // Safe Migration: If they have older flat data (no nested year)
+  if (data.monthlyBudget && typeof data.monthlyBudget['Jan'] === 'object' && !data.monthlyBudget['2026']) {
+     let oldMB = Object.assign({}, data.monthlyBudget);
+     let oldSP = Object.assign({}, data.savingsPlans);
+     let oldB = Object.assign({}, data.bills);
+     
+     data.monthlyBudget = {};
+     data.savingsPlans = {};
+     data.bills = {};
+     
+     data.monthlyBudget[currentY] = oldMB;
+     data.savingsPlans[currentY] = oldSP;
+     data.bills[currentY] = oldB;
+  }
+
   const out = Object.assign({}, def, data);
   out.profile = Object.assign({}, def.profile, data.profile||{});
-  out.savingsPlans = Object.assign({}, def.savingsPlans, data.savingsPlans||{});
-  out.bills = Object.assign({}, def.bills, data.bills||{});
-  out.monthlyBudget = Object.assign({}, def.monthlyBudget, data.monthlyBudget||{});
   out.creditCard = Object.assign({}, def.creditCard, data.creditCard||{});
   out.subscriptions = data.subscriptions || [];
   out.accounts = (data.accounts && data.accounts.length) ? data.accounts : def.accounts;
   out.moneyTx = data.moneyTx || [];
-  MONTHS.forEach(m=>{
-    out.savingsPlans[m] = Object.assign({planned:0,saved:false}, out.savingsPlans[m]||{});
-    out.bills[m] = out.bills[m] || [];
-    out.monthlyBudget[m] = Object.assign({payout1:0,payout2:0,needs:[],wants:[],investments:[]}, out.monthlyBudget[m]||{});
-  });
+  
+  out.monthlyBudget = out.monthlyBudget || {};
+  out.savingsPlans = out.savingsPlans || {};
+  out.bills = out.bills || {};
+  
+  ensureYearDataExists(out, currentAppYear);
   return out;
 }
 
@@ -561,22 +630,67 @@ function flashSaved(){
 }
 
 /* ---------------- Nav ---------------- */
+function getAvailableMonths(yearStr) {
+  const selectedYear = parseInt(yearStr);
+  const currentYear = new Date().getFullYear();
+  const currentMonthIdx = new Date().getMonth();
+  
+  if (selectedYear < currentYear) return MONTHS.slice(); 
+  if (selectedYear > currentYear) return []; 
+  return MONTHS.slice(0, currentMonthIdx + 1);
+}
+
+function wireSidebarYear() {
+  const ys = $("#sidebarYearSelect");
+  if(ys) {
+    ys.value = currentAppYear;
+    ys.addEventListener('change', (e) => {
+       currentAppYear = e.target.value;
+       if (DATA) {
+         ensureYearDataExists(DATA, currentAppYear);
+         queueSave();
+       }
+       buildMonthNav();
+       
+       const currentMonthIdx = new Date().getMonth();
+       const selectedYear = parseInt(currentAppYear);
+       const thisYear = new Date().getFullYear();
+       const mIdx = MONTHS.indexOf(currentMonth);
+       const isFuture = (selectedYear > thisYear) || (selectedYear === thisYear && mIdx > currentMonthIdx);
+       
+       if (currentTab === 'month' && isFuture) {
+          goTab('dashboard');
+       } else {
+          render();
+       }
+    });
+  }
+}
+
 function buildMonthNav(){
   const grid = $("#monthGrid");
   grid.innerHTML = "";
   
-  const currentMonthIdx = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const ys = $("#sidebarYearSelect");
+  if(ys) ys.value = currentAppYear;
+  
+  const available = getAvailableMonths(currentAppYear);
 
-  MONTHS.forEach((m, idx)=>{
-    if (idx > currentMonthIdx) return; // Hide future months completely
+  MONTHS.forEach((m)=>{
+    const isAvailable = available.includes(m);
     const chip = document.createElement('div');
     chip.className = "month-chip";
-    chip.textContent = `${m} ${currentYear}`;
+    if(!isAvailable) {
+      chip.classList.add('disabled');
+      chip.title = "Not available yet";
+    } else {
+      chip.addEventListener('click', ()=>{ goTab('month', m); });
+    }
+    chip.textContent = m;
     chip.dataset.month = m;
-    chip.addEventListener('click', ()=>{ goTab('month', m); });
     grid.appendChild(chip);
   });
+  $$(".month-chip").forEach(c=> c.classList.toggle('active', currentTab==='month' && c.dataset.month===currentMonth));
 }
 $("#monthsToggle").addEventListener('click', ()=>{
   $("#monthGrid").classList.toggle('open');
@@ -593,6 +707,7 @@ function setActiveNav(tab, month){
 const TITLES = {
   dashboard:["Dashboard","Your money, at a glance."],
   accounts:["Accounts & Money Flow","Every peso in, every peso out, and which bank it's sitting in."],
+  calendar:["Monthly Transaction Overview","A visual calendar of all money moving in and out."],
   savings:["Savings Tracker","Follow the 60/20/20 rule — or make it yours."],
   bills:["Bills Tracker","Never miss a due date again."],
   credit:["Credit Card Tracker","Know exactly what's yours to spend."],
@@ -604,7 +719,7 @@ function goTab(tab, month){
   if(tab==='month') currentMonth = month;
   setActiveNav(tab, month);
   if(tab==='month'){
-    $("#pageTitle").textContent = `${MONTH_NAMES[month]} ${new Date().getFullYear()} Budget`;
+    $("#pageTitle").textContent = `${MONTH_NAMES[month]} ${currentAppYear} Budget`;
     $("#pageSub").textContent = "Plan each payout, needs, wants, and investments.";
   } else {
     $("#pageTitle").textContent = TITLES[tab][0];
@@ -635,6 +750,7 @@ function render(){
 
   if(currentTab==='dashboard') el.innerHTML = renderDashboard();
   else if(currentTab==='accounts') el.innerHTML = renderAccounts();
+  else if(currentTab==='calendar') el.innerHTML = renderCalendar();
   else if(currentTab==='savings') el.innerHTML = renderSavings();
   else if(currentTab==='bills') el.innerHTML = renderBills();
   else if(currentTab==='credit') el.innerHTML = renderCredit();
@@ -668,26 +784,31 @@ function render(){
 
 /* ---------------- Derived calculations ---------------- */
 function totalSaved(){
-  return MONTHS.reduce((s,m)=> s + (DATA.savingsPlans[m].saved ? Number(DATA.savingsPlans[m].planned||0) : 0), 0);
+  if(!DATA.savingsPlans[currentAppYear]) return 0;
+  return MONTHS.reduce((s,m)=> s + (DATA.savingsPlans[currentAppYear][m]?.saved ? Number(DATA.savingsPlans[currentAppYear][m].planned||0) : 0), 0);
 }
 function idealMonthlySavings(){
   return Number(DATA.profile.monthlyIncome||0) * Number(DATA.profile.savingsRatio||0);
 }
 
-// Fixed metric: Uses genuine transactional logged income for the current year
 function yearIncome(){
-  const currentYear = new Date().getFullYear().toString();
   return (DATA.moneyTx||[])
-    .filter(t => t.type === 'income' && t.date && t.date.startsWith(currentYear))
+    .filter(t => t.type === 'income' && t.date && t.date.startsWith(currentAppYear))
     .reduce((s,t) => s + Number(t.amount||0), 0);
 }
 
-// Fixed metric: Uses genuine transactional logged expenses for the current year
 function yearExpenses(){
-  const currentYear = new Date().getFullYear().toString();
   return (DATA.moneyTx||[])
-    .filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentYear))
+    .filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentAppYear))
     .reduce((s,t) => s + Number(t.amount||0), 0);
+}
+
+function monthExpenseTotals(y, m){
+  const mb = DATA.monthlyBudget[y]?.[m] || {needs:[], wants:[], investments:[]};
+  const needs = (mb.needs||[]).reduce((s,i)=>s+Number(i.amount||0),0);
+  const wants = (mb.wants||[]).reduce((s,i)=>s+Number(i.amount||0),0);
+  const inv = (mb.investments||[]).reduce((s,i)=>s+Number(i.amount||0),0);
+  return {needs, wants, inv, total: needs+wants+inv};
 }
 
 function creditUsed(){
@@ -717,10 +838,6 @@ function accountBalance(accId){
 function totalBalance(){
   return (DATA.accounts||[]).reduce((s,a)=> s+accountBalance(a.id), 0);
 }
-function accountName(id){
-  const a = (DATA.accounts||[]).find(x=>x.id===id);
-  return a ? a.name : "—";
-}
 
 function renderAccounts(){
   const accounts = DATA.accounts||[];
@@ -746,8 +863,6 @@ function renderAccounts(){
       <div class="hint">Starting balance: <input type="number" step="any" class="mono" data-acc-start="${a.id}" value="${val(a.startingBalance)}" placeholder="0" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
     </div>`;
   }).join('');
-
-  const accountOptions = accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
 
   const rows = txs.map(t=>`
     <tr>
@@ -795,6 +910,58 @@ function renderAccounts(){
   `;
 }
 
+/* ---------------- Calendar / Monthly Transaction Overview ---------------- */
+function renderCalendar() {
+  const y = parseInt(calendarYear);
+  const mIdx = MONTHS.indexOf(calendarMonth);
+  const daysInMonth = new Date(y, mIdx + 1, 0).getDate();
+  const firstDay = new Date(y, mIdx, 1).getDay(); // 0 (Sun) to 6 (Sat)
+  
+  const monthTxs = (DATA.moneyTx||[]).filter(t => {
+     if(!t.date) return false;
+     const [ty, tm, td] = t.date.split('-');
+     return parseInt(ty) === y && parseInt(tm) === mIdx + 1;
+  });
+
+  let cells = [];
+  for(let i=0; i<firstDay; i++) cells.push(`<div class="cal-cell empty"></div>`);
+  
+  for(let d=1; d<=daysInMonth; d++) {
+     const dateStr = `${y}-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+     const dayTxs = monthTxs.filter(t => t.date === dateStr);
+     
+     let txHtml = dayTxs.map(t => {
+       let typeClass = t.type==='income' ? 'inc' : (t.type==='expense' ? 'exp' : 'trs');
+       let prefix = t.type==='income' ? '+' : (t.type==='expense' ? '-' : '⇄');
+       return `<div class="cal-tx ${typeClass}" title="${escapeHtml(t.desc)}: ${pesoShort(t.amount)}">
+         <span>${prefix}</span> <span>${pesoShort(t.amount)}</span> <span style="opacity:0.7;font-weight:400;margin-left:auto;">${escapeHtml(t.desc)}</span>
+       </div>`;
+     }).join('');
+
+     cells.push(`<div class="cal-cell"><div class="cal-date">${d}</div>${txHtml}</div>`);
+  }
+  
+  const padding = (7 - (cells.length % 7)) % 7;
+  if (padding < 7) {
+    for(let i=0; i<padding; i++) cells.push(`<div class="cal-cell empty"></div>`);
+  }
+
+  const yearOpts = [2026,2027,2028,2029,2030].map(yr=>`<option value="${yr}" ${yr==y?'selected':''}>${yr}</option>`).join('');
+  const monthOpts = MONTHS.map(m=>`<option value="${m}" ${m==calendarMonth?'selected':''}>${m}</option>`).join('');
+
+  return `
+    <div class="cal-select-wrap">
+      <select id="calMonthSel" class="cal-select">${monthOpts}</select>
+      <select id="calYearSel" class="cal-select">${yearOpts}</select>
+    </div>
+    <div class="calendar-grid">
+      <div class="cal-head">Sun</div><div class="cal-head">Mon</div><div class="cal-head">Tue</div>
+      <div class="cal-head">Wed</div><div class="cal-head">Thu</div><div class="cal-head">Fri</div><div class="cal-head">Sat</div>
+      ${cells.join('')}
+    </div>
+  `;
+}
+
 /* ---------------- Dashboard ---------------- */
 function renderDashboard(){
   const income = yearIncome();
@@ -804,7 +971,9 @@ function renderDashboard(){
   const goalPct = goal>0 ? Math.min(100, Math.round(saved/goal*100)) : 0;
   const ccLimit = Number(DATA.creditCard.limit||0);
   const ccUsed = creditUsed();
-  const billsThisMonth = DATA.bills[currentThisMonth()] || [];
+  
+  const dashboardMonth = MONTHS[new Date().getMonth()];
+  const billsThisMonth = (DATA.bills[currentAppYear] && DATA.bills[currentAppYear][dashboardMonth]) ? DATA.bills[currentAppYear][dashboardMonth] : [];
   const paidCount = billsThisMonth.filter(b=>b.paid).length;
 
   const acctTotal = totalBalance();
@@ -826,7 +995,7 @@ function renderDashboard(){
     <div class="card">
       <h3>This month's bills</h3>
       ${billsThisMonth.length ? `<div class="donut-wrap"><canvas id="dashDonut"></canvas><div class="donut-legend"><div>✅ Paid: <b>${paidCount}</b></div><div>⏳ Unpaid: <b>${billsThisMonth.length-paidCount}</b></div></div></div>`
-      : `<div class="empty-note">No bills logged for ${MONTH_NAMES[currentThisMonth()]} yet — add some in the Bills Tracker.</div>`}
+      : `<div class="empty-note">No bills logged for ${MONTH_NAMES[dashboardMonth]} yet — add some in the Bills Tracker.</div>`}
     </div>
   </div>
 
@@ -849,9 +1018,8 @@ function moneyHealthRows(){
   const expenses = yearExpenses();
   const saved = totalSaved(); 
   
-  const currentYear = new Date().getFullYear().toString();
   const invested = (DATA.moneyTx||[])
-    .filter(t => t.type === 'investment' && t.date && t.date.startsWith(currentYear))
+    .filter(t => t.type === 'investment' && t.date && t.date.startsWith(currentAppYear))
     .reduce((s,t) => s + Number(t.amount||0), 0);
 
   if(income===0) return `<div class="empty-note">Log your income in Accounts & Money Flow to see your health check.</div>`;
@@ -880,11 +1048,14 @@ function renderSavings(){
   const goal = Number(p.goalAmount||0);
   const pct = goal>0 ? Math.min(100, Math.round(saved/goal*100)) : 0;
 
-  const currentMonthIdx = new Date().getMonth();
-  const visibleMonths = MONTHS.slice(0, currentMonthIdx + 1);
+  const availableMonths = getAvailableMonths(currentAppYear);
 
-  const rows = visibleMonths.map(m=>{
-    const plan = DATA.savingsPlans[m];
+  if(availableMonths.length === 0) {
+     return `<div class="empty-note" style="margin-top:20px;">This year is in the future. Come back closer to ${currentAppYear} to plan savings.</div>`;
+  }
+
+  const rows = availableMonths.map(m=>{
+    const plan = DATA.savingsPlans[currentAppYear][m];
     return `<tr>
       <td>${m}</td>
       <td><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0"></td>
@@ -937,18 +1108,20 @@ function renderSavings(){
 
 /* ---------------- Bills Tracker ---------------- */
 function renderBills(){
-  const currentMonthIdx = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const visibleMonths = MONTHS.slice(0, currentMonthIdx + 1);
-  
-  let activeMonth = renderBills._month || MONTHS[currentMonthIdx];
-  if (!visibleMonths.includes(activeMonth)) {
-    activeMonth = visibleMonths[visibleMonths.length - 1];
+  const availableMonths = getAvailableMonths(currentAppYear);
+
+  if (availableMonths.length === 0) {
+     return `<div class="empty-note" style="margin-top:20px;">This year is in the future. No bills can be logged for ${currentAppYear} yet.</div>`;
+  }
+
+  let activeMonth = renderBills._month || MONTHS[new Date().getMonth()];
+  if (!availableMonths.includes(activeMonth)) {
+    activeMonth = availableMonths[availableMonths.length - 1];
   }
   renderBills._month = activeMonth;
 
-  const tabs = visibleMonths.map(m=>`<button data-bill-month-tab="${m}" class="${m===activeMonth?'active':''}">${m} ${currentYear}</button>`).join('');
-  const list = DATA.bills[activeMonth] || [];
+  const tabs = availableMonths.map(m=>`<button data-bill-month-tab="${m}" class="${m===activeMonth?'active':''}">${m} ${currentAppYear}</button>`).join('');
+  const list = DATA.bills[currentAppYear][activeMonth] || [];
   const paid = list.filter(b=>b.paid).length;
   const pct = list.length ? Math.round(paid/list.length*100) : 0;
   const accounts = DATA.accounts||[];
@@ -1098,8 +1271,8 @@ function renderSettings(){
 
 /* ---------------- Monthly Budget tab (per month) ---------------- */
 function renderMonth(m){
-  const mb = DATA.monthlyBudget[m];
-  const savingsPlan = DATA.savingsPlans[m];
+  const mb = DATA.monthlyBudget[currentAppYear][m];
+  const savingsPlan = DATA.savingsPlans[currentAppYear][m];
   const savingsPerPayout = Number(savingsPlan.planned||0)/2;
 
   function itemRows(list, key){
@@ -1178,12 +1351,16 @@ function renderMonth(m){
 
 /* ---------------- Event wiring after render ---------------- */
 function attachHandlers(){
+  if(currentTab==='calendar') {
+    $("#calMonthSel")?.addEventListener('change', e => { calendarMonth = e.target.value; render(); });
+    $("#calYearSel")?.addEventListener('change', e => { calendarYear = e.target.value; render(); });
+  }
   if(currentTab==='bills'){
     $$("[data-bill-month-tab]").forEach(btn=>{
       btn.addEventListener('click', ()=>{ renderBills._month = btn.dataset.billMonthTab; render(); });
     });
     $("#addBillBtn")?.addEventListener('click', ()=>{
-      DATA.bills[renderBills._month].push({id:uid(), date:'', name:'', amount:0, accountId:'', paid:false});
+      DATA.bills[currentAppYear][renderBills._month].push({id:uid(), date:'', name:'', amount:0, accountId:'', paid:false});
       queueSave(); render();
     });
     
@@ -1201,7 +1378,7 @@ function attachHandlers(){
     $$("[data-bill-del]").forEach(i=>i.addEventListener('click', e=>{
       const id = e.target.dataset.billDel;
       DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBillId !== id);
-      DATA.bills[renderBills._month] = DATA.bills[renderBills._month].filter(b=>b.id!==id);
+      DATA.bills[currentAppYear][renderBills._month] = DATA.bills[currentAppYear][renderBills._month].filter(b=>b.id!==id);
       queueSave(); render();
     }));
     $("#addSubBtn")?.addEventListener('click', ()=>{
@@ -1233,14 +1410,14 @@ function attachHandlers(){
     $$("[data-savings-planned]").forEach(i=>{
       i.addEventListener('input', e=>{
         const m = e.target.dataset.savingsPlanned;
-        DATA.savingsPlans[m].planned = Number(e.target.value);
+        DATA.savingsPlans[currentAppYear][m].planned = Number(e.target.value);
         queueSave();
       });
       i.addEventListener('change', ()=>render());
     });
     $$("[data-savings-saved]").forEach(i=>i.addEventListener('change', e=>{
       const m = e.target.dataset.savingsSaved;
-      DATA.savingsPlans[m].saved = e.target.checked;
+      DATA.savingsPlans[currentAppYear][m].saved = e.target.checked;
       queueSave(); render();
     }));
   }
@@ -1328,14 +1505,14 @@ function attachHandlers(){
     $$("[data-payout]").forEach(i=>{
       i.addEventListener('input', e=>{
         const key = e.target.dataset.payout==='1' ? 'payout1':'payout2';
-        DATA.monthlyBudget[m][key] = Number(e.target.value);
+        DATA.monthlyBudget[currentAppYear][m][key] = Number(e.target.value);
         queueSave();
       });
       i.addEventListener('change', ()=>render());
     });
     $$("[data-add-item]").forEach(btn=>btn.addEventListener('click', ()=>{
       const key = btn.dataset.addItem;
-      DATA.monthlyBudget[m][key].push({id:uid(), name:'', amount:0, method:'', payout:1});
+      DATA.monthlyBudget[currentAppYear][m][key].push({id:uid(), name:'', amount:0, method:'', payout:1});
       queueSave(); render();
     }));
     $$("[data-item-name]").forEach(i=>i.addEventListener('input', e=>{
@@ -1361,14 +1538,15 @@ function attachHandlers(){
     }));
     $$("[data-item-del]").forEach(i=>i.addEventListener('click', e=>{
       const [key,id] = e.target.dataset.itemDel.split(':');
-      DATA.monthlyBudget[m][key] = DATA.monthlyBudget[m][key].filter(it=>it.id!==id);
+      DATA.monthlyBudget[currentAppYear][m][key] = DATA.monthlyBudget[currentAppYear][m][key].filter(it=>it.id!==id);
       queueSave(); render();
     }));
   }
 
   try{
     if(currentTab==='dashboard'){
-      const list = DATA.bills[currentThisMonth()]||[];
+      const dashboardMonth = MONTHS[new Date().getMonth()];
+      const list = (DATA.bills[currentAppYear] && DATA.bills[currentAppYear][dashboardMonth]) ? DATA.bills[currentAppYear][dashboardMonth] : [];
       if(list.length){
         const paid = list.filter(b=>b.paid).length;
         drawDonut('dashDonut', paid, list.length-paid);
@@ -1376,7 +1554,7 @@ function attachHandlers(){
       drawCashFlowChart('cashFlowChart');
     }
     if(currentTab==='bills'){
-      const list = DATA.bills[renderBills._month]||[];
+      const list = DATA.bills[currentAppYear][renderBills._month]||[];
       const paid = list.filter(b=>b.paid).length;
       drawDonut('billsDonut', paid, list.length-paid);
     }
@@ -1388,13 +1566,13 @@ function attachHandlers(){
 
 function setBill(id, field, val){
   const m = renderBills._month;
-  const b = DATA.bills[m].find(x=>x.id===id);
+  const b = DATA.bills[currentAppYear][m].find(x=>x.id===id);
   if(b){ b[field]=val; queueSave(); }
 }
 
 function syncBillToMoneyTx(billId) {
   const m = renderBills._month;
-  const b = DATA.bills[m].find(x=>x.id===billId);
+  const b = DATA.bills[currentAppYear][m].find(x=>x.id===billId);
   if(!b) return;
 
   let txIndex = DATA.moneyTx.findIndex(t => t.linkedBillId === billId);
@@ -1438,7 +1616,7 @@ function setMoneyTx(id, field, val){
   if(t){ t[field]=val; queueSave(); }
 }
 function setItem(m, key, id, field, val){
-  const item = DATA.monthlyBudget[m][key].find(x=>x.id===id);
+  const item = DATA.monthlyBudget[currentAppYear][m][key].find(x=>x.id===id);
   if(item){ item[field]=val; queueSave(); }
 }
 
@@ -1460,21 +1638,21 @@ function drawCashFlowChart(canvasId){
   if(!el) return;
   if(chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
   
-  const currentMonthIdx = new Date().getMonth();
-  const currentYear = new Date().getFullYear().toString();
-  const visibleMonths = MONTHS.slice(0, currentMonthIdx + 1);
+  const visibleMonths = getAvailableMonths(currentAppYear);
 
-  const incomeData = visibleMonths.map((m, i) => {
+  const incomeData = visibleMonths.map((m) => {
+    const mIdx = MONTHS.indexOf(m);
     return (DATA.moneyTx||[]).filter(t => {
-      if (t.type !== 'income' || !t.date || !t.date.startsWith(currentYear)) return false;
-      return parseInt(t.date.split('-')[1], 10) - 1 === i;
+      if (t.type !== 'income' || !t.date || !t.date.startsWith(currentAppYear)) return false;
+      return parseInt(t.date.split('-')[1], 10) - 1 === mIdx;
     }).reduce((s, t) => s + Number(t.amount||0), 0);
   });
 
-  const expenseData = visibleMonths.map((m, i) => {
+  const expenseData = visibleMonths.map((m) => {
+    const mIdx = MONTHS.indexOf(m);
     return (DATA.moneyTx||[]).filter(t => {
-      if (t.type !== 'expense' || !t.date || !t.date.startsWith(currentYear)) return false;
-      return parseInt(t.date.split('-')[1], 10) - 1 === i;
+      if (t.type !== 'expense' || !t.date || !t.date.startsWith(currentAppYear)) return false;
+      return parseInt(t.date.split('-')[1], 10) - 1 === mIdx;
     }).reduce((s, t) => s + Number(t.amount||0), 0);
   });
 
@@ -1482,7 +1660,7 @@ function drawCashFlowChart(canvasId){
     type:'bar',
     data:{ labels:visibleMonths, datasets:[
       {label:'Income', data:incomeData, backgroundColor:'#1f6b45', borderRadius:4},
-      {label:'Expenses', data:expenseData, backgroundColor:'#a8402a', borderRadius:4},
+      {label:'Expenses', data:expenseData, backgroundColor:'#bf9b30', borderRadius:4},
     ]},
     options:{responsive:true, plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}},
       scales:{y:{ticks:{callback:v=>pesoShort(v)}}, x:{grid:{display:false}}}}
