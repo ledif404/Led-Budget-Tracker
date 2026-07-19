@@ -1177,9 +1177,14 @@ function attachHandlers(){
     
     $$("[data-bill-date]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billDate,'date',e.target.value); syncBillToMoneyTx(e.target.dataset.billDate); }));
     $$("[data-bill-name]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billName,'name',e.target.value); syncBillToMoneyTx(e.target.dataset.billName); }));
-    $$("[data-bill-amount]").forEach(i=>i.addEventListener('input', e=>{ setBill(e.target.dataset.billAmount,'amount',Number(e.target.value)); syncBillToMoneyTx(e.target.dataset.billAmount); render(); }));
     $$("[data-bill-account]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billAccount,'accountId',e.target.value); syncBillToMoneyTx(e.target.dataset.billAccount); render(); }));
     $$("[data-bill-paid]").forEach(i=>i.addEventListener('change', e=>{ setBill(e.target.dataset.billPaid,'paid',e.target.checked); syncBillToMoneyTx(e.target.dataset.billPaid); render(); }));
+    
+    // THE FIX: Listen for input to save data silently, but only re-render the page on "change" (when you blur/press enter).
+    $$("[data-bill-amount]").forEach(i=>{
+      i.addEventListener('input', e=>{ setBill(e.target.dataset.billAmount,'amount',Number(e.target.value)); syncBillToMoneyTx(e.target.dataset.billAmount); });
+      i.addEventListener('change', ()=>render());
+    });
     
     $$("[data-bill-del]").forEach(i=>i.addEventListener('click', e=>{
       const id = e.target.dataset.billDel;
@@ -1192,7 +1197,13 @@ function attachHandlers(){
       queueSave(); render();
     });
     $$("[data-sub-name]").forEach(i=>i.addEventListener('input', e=>{ setSub(e.target.dataset.subName,'name',e.target.value); }));
-    $$("[data-sub-amount]").forEach(i=>i.addEventListener('input', e=>{ setSub(e.target.dataset.subAmount,'amount',Number(e.target.value)); render(); }));
+    
+    // THE FIX applied here too
+    $$("[data-sub-amount]").forEach(i=>{
+      i.addEventListener('input', e=>{ setSub(e.target.dataset.subAmount,'amount',Number(e.target.value)); });
+      i.addEventListener('change', ()=>render());
+    });
+    
     $$("[data-sub-del]").forEach(i=>i.addEventListener('click', e=>{
       DATA.subscriptions = DATA.subscriptions.filter(s=>s.id!==e.target.dataset.subDel);
       queueSave(); render();
@@ -1200,16 +1211,23 @@ function attachHandlers(){
     $("#notesInput")?.addEventListener('input', e=>{ DATA.notes = e.target.value; queueSave(); });
   }
   if(currentTab==='savings'){
-    $("#incomeInput")?.addEventListener('input', e=>{ DATA.profile.monthlyIncome = Number(e.target.value); queueSave(); render(); });
-    $("#savingsRatioInput")?.addEventListener('input', e=>{ DATA.profile.savingsRatio = Number(e.target.value); queueSave(); render(); });
+    // THE FIX applied to all numeric inputs below
+    $("#incomeInput")?.addEventListener('input', e=>{ DATA.profile.monthlyIncome = Number(e.target.value); queueSave(); });
+    $("#incomeInput")?.addEventListener('change', ()=>render());
+    $("#savingsRatioInput")?.addEventListener('input', e=>{ DATA.profile.savingsRatio = Number(e.target.value); queueSave(); });
+    $("#savingsRatioInput")?.addEventListener('change', ()=>render());
     $("#goalNameInput")?.addEventListener('input', e=>{ DATA.profile.goalName = e.target.value; queueSave(); });
     $("#goalNameInput")?.addEventListener('blur', ()=>render());
-    $("#goalAmountInput")?.addEventListener('input', e=>{ DATA.profile.goalAmount = Number(e.target.value); queueSave(); render(); });
-    $$("[data-savings-planned]").forEach(i=>i.addEventListener('input', e=>{
-      const m = e.target.dataset.savingsPlanned;
-      DATA.savingsPlans[m].planned = Number(e.target.value);
-      queueSave(); render();
-    }));
+    $("#goalAmountInput")?.addEventListener('input', e=>{ DATA.profile.goalAmount = Number(e.target.value); queueSave(); });
+    $("#goalAmountInput")?.addEventListener('change', ()=>render());
+    $$("[data-savings-planned]").forEach(i=>{
+      i.addEventListener('input', e=>{
+        const m = e.target.dataset.savingsPlanned;
+        DATA.savingsPlans[m].planned = Number(e.target.value);
+        queueSave();
+      });
+      i.addEventListener('change', ()=>render());
+    });
     $$("[data-savings-saved]").forEach(i=>i.addEventListener('change', e=>{
       const m = e.target.dataset.savingsSaved;
       DATA.savingsPlans[m].saved = e.target.checked;
@@ -1217,7 +1235,8 @@ function attachHandlers(){
     }));
   }
   if(currentTab==='credit'){
-    $("#ccLimitInput")?.addEventListener('input', e=>{ DATA.creditCard.limit = Number(e.target.value); queueSave(); render(); });
+    $("#ccLimitInput")?.addEventListener('input', e=>{ DATA.creditCard.limit = Number(e.target.value); queueSave(); });
+    $("#ccLimitInput")?.addEventListener('change', ()=>render());
     $("#addTxBtn")?.addEventListener('click', ()=>{
       DATA.creditCard.transactions.push({id:uid(), date:new Date().toISOString().slice(0,10), desc:'', type:'charge', amount:0});
       queueSave(); render();
@@ -1225,7 +1244,13 @@ function attachHandlers(){
     $$("[data-tx-date]").forEach(i=>i.addEventListener('input', e=>setTx(e.target.dataset.txDate,'date',e.target.value)));
     $$("[data-tx-desc]").forEach(i=>i.addEventListener('input', e=>setTx(e.target.dataset.txDesc,'desc',e.target.value)));
     $$("[data-tx-type]").forEach(i=>i.addEventListener('change', e=>{ setTx(e.target.dataset.txType,'type',e.target.value); render(); }));
-    $$("[data-tx-amount]").forEach(i=>i.addEventListener('input', e=>{ setTx(e.target.dataset.txAmount,'amount',Number(e.target.value)); render(); }));
+    
+    // THE FIX applied
+    $$("[data-tx-amount]").forEach(i=>{
+      i.addEventListener('input', e=>{ setTx(e.target.dataset.txAmount,'amount',Number(e.target.value)); });
+      i.addEventListener('change', ()=>render());
+    });
+    
     $$("[data-tx-del]").forEach(i=>i.addEventListener('click', e=>{
       DATA.creditCard.transactions = DATA.creditCard.transactions.filter(t=>t.id!==e.target.dataset.txDel);
       queueSave(); render();
@@ -1242,12 +1267,18 @@ function attachHandlers(){
     }));
     $$("[data-acc-type]").forEach(i=>i.addEventListener('change', e=>{
       const acc = DATA.accounts.find(a=>a.id===e.target.dataset.accType);
-      if(acc){ acc.type=e.target.value; queueSave(); }
+      if(acc){ acc.type=e.target.value; queueSave(); render(); }
     }));
-    $$("[data-acc-start]").forEach(i=>i.addEventListener('input', e=>{
-      const acc = DATA.accounts.find(a=>a.id===e.target.dataset.accStart);
-      if(acc){ acc.startingBalance=Number(e.target.value); queueSave(); render(); }
-    }));
+    
+    // THE FIX applied
+    $$("[data-acc-start]").forEach(i=>{
+      i.addEventListener('input', e=>{
+        const acc = DATA.accounts.find(a=>a.id===e.target.dataset.accStart);
+        if(acc){ acc.startingBalance=Number(e.target.value); queueSave(); }
+      });
+      i.addEventListener('change', ()=>render());
+    });
+    
     $$("[data-acc-del]").forEach(i=>i.addEventListener('click', e=>{
       const id = e.target.dataset.accDel;
       const stillUsed = (DATA.moneyTx||[]).some(t=>t.accountId===id||t.toAccountId===id);
@@ -1264,7 +1295,13 @@ function attachHandlers(){
     $$("[data-tx2-desc]").forEach(i=>i.addEventListener('input', e=>setMoneyTx(e.target.dataset.tx2Desc,'desc',e.target.value)));
     $$("[data-tx2-account]").forEach(i=>i.addEventListener('change', e=>{ setMoneyTx(e.target.dataset.tx2Account,'accountId',e.target.value); render(); }));
     $$("[data-tx2-to]").forEach(i=>i.addEventListener('change', e=>{ setMoneyTx(e.target.dataset.tx2To,'toAccountId',e.target.value); render(); }));
-    $$("[data-tx2-amount]").forEach(i=>i.addEventListener('input', e=>{ setMoneyTx(e.target.dataset.tx2Amount,'amount',Number(e.target.value)); render(); }));
+    
+    // THE FIX applied here for Money flow amounts
+    $$("[data-tx2-amount]").forEach(i=>{
+      i.addEventListener('input', e=>{ setMoneyTx(e.target.dataset.tx2Amount,'amount',Number(e.target.value)); });
+      i.addEventListener('change', ()=>render());
+    });
+    
     $$("[data-tx2-del]").forEach(i=>i.addEventListener('click', e=>{
       DATA.moneyTx = DATA.moneyTx.filter(t=>t.id!==e.target.dataset.tx2Del);
       queueSave(); render();
@@ -1281,11 +1318,15 @@ function attachHandlers(){
   }
   if(currentTab==='month'){
     const m = currentMonth;
-    $$("[data-payout]").forEach(i=>i.addEventListener('input', e=>{
-      const key = e.target.dataset.payout==='1' ? 'payout1':'payout2';
-      DATA.monthlyBudget[m][key] = Number(e.target.value);
-      queueSave(); render();
-    }));
+    // THE FIX applied
+    $$("[data-payout]").forEach(i=>{
+      i.addEventListener('input', e=>{
+        const key = e.target.dataset.payout==='1' ? 'payout1':'payout2';
+        DATA.monthlyBudget[m][key] = Number(e.target.value);
+        queueSave();
+      });
+      i.addEventListener('change', ()=>render());
+    });
     $$("[data-add-item]").forEach(btn=>btn.addEventListener('click', ()=>{
       const key = btn.dataset.addItem;
       DATA.monthlyBudget[m][key].push({id:uid(), name:'', amount:0, method:'', payout:1});
@@ -1295,10 +1336,16 @@ function attachHandlers(){
       const [key,id] = e.target.dataset.itemName.split(':');
       setItem(m,key,id,'name',e.target.value);
     }));
-    $$("[data-item-amount]").forEach(i=>i.addEventListener('input', e=>{
-      const [key,id] = e.target.dataset.itemAmount.split(':');
-      setItem(m,key,id,'amount',Number(e.target.value)); render();
-    }));
+    
+    // THE FIX applied
+    $$("[data-item-amount]").forEach(i=>{
+      i.addEventListener('input', e=>{
+        const [key,id] = e.target.dataset.itemAmount.split(':');
+        setItem(m,key,id,'amount',Number(e.target.value));
+      });
+      i.addEventListener('change', ()=>render());
+    });
+    
     $$("[data-item-method]").forEach(i=>i.addEventListener('input', e=>{
       const [key,id] = e.target.dataset.itemMethod.split(':');
       setItem(m,key,id,'method',e.target.value);
