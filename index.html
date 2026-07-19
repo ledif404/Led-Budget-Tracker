@@ -275,6 +275,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
     <nav id="mainNav">
       <div class="nav-group">
         <div class="nav-tab" data-tab="dashboard"><span class="dot"></span>Dashboard</div>
+        <div class="nav-tab" data-tab="accounts"><span class="dot"></span>Accounts &amp; Money Flow</div>
         <div class="nav-tab" data-tab="savings"><span class="dot"></span>Savings Tracker</div>
         <div class="nav-tab" data-tab="bills"><span class="dot"></span>Bills Tracker</div>
         <div class="nav-tab" data-tab="credit"><span class="dot"></span>Credit Card Tracker</div>
@@ -345,7 +346,11 @@ function defaultData(){
     creditCard:{limit:0, transactions:[]},
     subscriptions:[],
     monthlyBudget,
-    notes:""
+    notes:"",
+    accounts:[
+      {id:uid(), name:"Cash", type:"cash", startingBalance:0}
+    ],
+    moneyTx:[]
   };
 }
 
@@ -523,6 +528,8 @@ function mergeDefaults(data){
   out.monthlyBudget = Object.assign({}, def.monthlyBudget, data.monthlyBudget||{});
   out.creditCard = Object.assign({}, def.creditCard, data.creditCard||{});
   out.subscriptions = data.subscriptions || [];
+  out.accounts = (data.accounts && data.accounts.length) ? data.accounts : def.accounts;
+  out.moneyTx = data.moneyTx || [];
   MONTHS.forEach(m=>{
     out.savingsPlans[m] = Object.assign({planned:0,saved:false}, out.savingsPlans[m]||{});
     out.bills[m] = out.bills[m] || [];
@@ -576,6 +583,7 @@ function setActiveNav(tab, month){
 
 const TITLES = {
   dashboard:["Dashboard","Your money, at a glance."],
+  accounts:["Accounts & Money Flow","Every peso in, every peso out, and which bank it's sitting in."],
   savings:["Savings Tracker","Follow the 60/20/20 rule — or make it yours."],
   bills:["Bills Tracker","Never miss a due date again."],
   credit:["Credit Card Tracker","Know exactly what's yours to spend."],
@@ -599,6 +607,7 @@ function goTab(tab, month){
 function render(){
   const el = $("#tabContent");
   if(currentTab==='dashboard') el.innerHTML = renderDashboard();
+  else if(currentTab==='accounts') el.innerHTML = renderAccounts();
   else if(currentTab==='savings') el.innerHTML = renderSavings();
   else if(currentTab==='bills') el.innerHTML = renderBills();
   else if(currentTab==='credit') el.innerHTML = renderCredit();
@@ -633,6 +642,101 @@ function creditUsed(){
   return Math.max(0, used);
 }
 
+/* ---------------- Accounts & Money Flow ---------------- */
+function accountBalance(accId){
+  const acc = (DATA.accounts||[]).find(a=>a.id===accId);
+  let bal = Number(acc ? acc.startingBalance||0 : 0);
+  (DATA.moneyTx||[]).forEach(t=>{
+    const amt = Number(t.amount||0);
+    if(t.type==='income' && t.accountId===accId) bal += amt;
+    else if(t.type==='expense' && t.accountId===accId) bal -= amt;
+    else if(t.type==='transfer'){
+      if(t.accountId===accId) bal -= amt;
+      if(t.toAccountId===accId) bal += amt;
+    }
+  });
+  return bal;
+}
+function totalBalance(){
+  return (DATA.accounts||[]).reduce((s,a)=> s+accountBalance(a.id), 0);
+}
+function accountName(id){
+  const a = (DATA.accounts||[]).find(x=>x.id===id);
+  return a ? a.name : "—";
+}
+
+function renderAccounts(){
+  const accounts = DATA.accounts||[];
+  const txs = (DATA.moneyTx||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  const total = totalBalance();
+
+  const accountCards = accounts.map(a=>{
+    const bal = accountBalance(a.id);
+    return `<div class="card stat-card ${bal<0?'warn':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+        <input type="text" data-acc-name="${a.id}" value="${escapeHtml(a.name)}" style="border:none;background:transparent;font-weight:700;font-size:14px;padding:0;width:auto;flex:1;">
+        <button class="row-del" data-acc-del="${a.id}" title="Remove account">✕</button>
+      </div>
+      <div class="num" style="margin-top:6px;">${peso(bal)}</div>
+      <div class="label" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <select data-acc-type="${a.id}" style="border:1px solid var(--line);border-radius:6px;padding:3px 5px;font-size:11px;text-transform:none;font-weight:500;">
+          <option value="bank" ${a.type==='bank'?'selected':''}>Bank</option>
+          <option value="ewallet" ${a.type==='ewallet'?'selected':''}>E-wallet</option>
+          <option value="cash" ${a.type==='cash'?'selected':''}>Cash</option>
+          <option value="other" ${a.type==='other'?'selected':''}>Other</option>
+        </select>
+      </div>
+      <div class="hint">Starting balance: <input type="number" class="mono" data-acc-start="${a.id}" value="${a.startingBalance||0}" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
+    </div>`;
+  }).join('');
+
+  const accountOptions = accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+
+  const rows = txs.map(t=>`
+    <tr>
+      <td><input type="date" data-tx2-date="${t.id}" value="${t.date||''}"></td>
+      <td>
+        <select data-tx2-type="${t.id}">
+          <option value="income" ${t.type==='income'?'selected':''}>Income</option>
+          <option value="expense" ${t.type==='expense'?'selected':''}>Expense</option>
+          <option value="transfer" ${t.type==='transfer'?'selected':''}>Transfer</option>
+        </select>
+      </td>
+      <td><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries"></td>
+      <td>
+        <select data-tx2-account="${t.id}"><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
+      </td>
+      <td>
+        ${t.type==='transfer' ? `<select data-tx2-to="${t.id}"><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
+      </td>
+      <td><input type="number" class="mono" data-tx2-amount="${t.id}" value="${t.amount||0}"></td>
+      <td style="text-align:right;"><button class="row-del" data-tx2-del="${t.id}">✕</button></td>
+    </tr>`).join('');
+
+  return `
+  <div class="card stat-card good" style="margin-bottom:16px;max-width:280px;">
+    <div class="label">Total across all accounts</div>
+    <div class="num">${peso(total)}</div>
+  </div>
+
+  <div class="section-title">Your accounts</div>
+  <div class="grid cols-3">
+    ${accountCards}
+  </div>
+  <button class="btn small ghost add-row" id="addAccountBtn" style="margin-top:12px;">+ Add account or bank</button>
+
+  <div class="section-title">Money flow — every peso in, out, or moved</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+    </table>
+    <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
+    <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI).</div>
+  </div>
+  `;
+}
+
 /* ---------------- Dashboard ---------------- */
 function renderDashboard(){
   const income = yearIncome();
@@ -645,8 +749,10 @@ function renderDashboard(){
   const billsThisMonth = DATA.bills[currentThisMonth()] || [];
   const paidCount = billsThisMonth.filter(b=>b.paid).length;
 
+  const acctTotal = totalBalance();
   return `
   <div class="grid cols-4" style="margin-bottom:6px;">
+    <div class="card stat-card good"><div class="label">Total across accounts</div><div class="num">${pesoShort(acctTotal)}</div></div>
     <div class="card stat-card"><div class="label">Year income logged</div><div class="num">${pesoShort(income)}</div></div>
     <div class="card stat-card ${expensesYear>income && income>0 ? 'warn':''}"><div class="label">Year expenses logged</div><div class="num">${pesoShort(expensesYear)}</div></div>
     <div class="card stat-card good"><div class="label">Total saved</div><div class="num">${pesoShort(saved)}</div></div>
@@ -1009,19 +1115,7 @@ function moneyHealthRowsForMonth(m, income, expenses, saved, invested){
 
 /* ---------------- Event wiring after render ---------------- */
 function attachHandlers(){
-  // dashboard charts
-  if(currentTab==='dashboard'){
-    const list = DATA.bills[currentThisMonth()]||[];
-    if(list.length){
-      const paid = list.filter(b=>b.paid).length;
-      drawDonut('dashDonut', paid, list.length-paid);
-    }
-    drawCashFlowChart('cashFlowChart');
-  }
   if(currentTab==='bills'){
-    const list = DATA.bills[renderBills._month]||[];
-    const paid = list.filter(b=>b.paid).length;
-    drawDonut('billsDonut', paid, list.length-paid);
     $$("[data-bill-month-tab]").forEach(btn=>{
       btn.addEventListener('click', ()=>{ renderBills._month = btn.dataset.billMonthTab; render(); });
     });
@@ -1067,7 +1161,6 @@ function attachHandlers(){
     }));
   }
   if(currentTab==='credit'){
-    drawDonut('ccDonut', creditUsed(), Math.max(0,Number(DATA.creditCard.limit||0)-creditUsed()), true);
     $("#ccLimitInput")?.addEventListener('input', e=>{ DATA.creditCard.limit = Number(e.target.value); queueSave(); render(); });
     $("#addTxBtn")?.addEventListener('click', ()=>{
       DATA.creditCard.transactions.push({id:uid(), date:new Date().toISOString().slice(0,10), desc:'', type:'charge', amount:0});
@@ -1079,6 +1172,45 @@ function attachHandlers(){
     $$("[data-tx-amount]").forEach(i=>i.addEventListener('input', e=>{ setTx(e.target.dataset.txAmount,'amount',Number(e.target.value)); render(); }));
     $$("[data-tx-del]").forEach(i=>i.addEventListener('click', e=>{
       DATA.creditCard.transactions = DATA.creditCard.transactions.filter(t=>t.id!==e.target.dataset.txDel);
+      queueSave(); render();
+    }));
+  }
+  if(currentTab==='accounts'){
+    $("#addAccountBtn")?.addEventListener('click', ()=>{
+      DATA.accounts.push({id:uid(), name:'New account', type:'bank', startingBalance:0});
+      queueSave(); render();
+    });
+    $$("[data-acc-name]").forEach(i=>i.addEventListener('input', e=>{
+      const acc = DATA.accounts.find(a=>a.id===e.target.dataset.accName);
+      if(acc){ acc.name=e.target.value; queueSave(); }
+    }));
+    $$("[data-acc-type]").forEach(i=>i.addEventListener('change', e=>{
+      const acc = DATA.accounts.find(a=>a.id===e.target.dataset.accType);
+      if(acc){ acc.type=e.target.value; queueSave(); }
+    }));
+    $$("[data-acc-start]").forEach(i=>i.addEventListener('input', e=>{
+      const acc = DATA.accounts.find(a=>a.id===e.target.dataset.accStart);
+      if(acc){ acc.startingBalance=Number(e.target.value); queueSave(); render(); }
+    }));
+    $$("[data-acc-del]").forEach(i=>i.addEventListener('click', e=>{
+      const id = e.target.dataset.accDel;
+      const stillUsed = (DATA.moneyTx||[]).some(t=>t.accountId===id||t.toAccountId===id);
+      if(stillUsed && !confirm("This account has entries linked to it. Remove it anyway? Those entries will keep their amounts but lose the account link.")) return;
+      DATA.accounts = DATA.accounts.filter(a=>a.id!==id);
+      queueSave(); render();
+    }));
+    $("#addMoneyTxBtn")?.addEventListener('click', ()=>{
+      DATA.moneyTx.push({id:uid(), date:new Date().toISOString().slice(0,10), type:'income', desc:'', accountId:DATA.accounts[0]?DATA.accounts[0].id:'', toAccountId:'', amount:0});
+      queueSave(); render();
+    });
+    $$("[data-tx2-date]").forEach(i=>i.addEventListener('input', e=>setMoneyTx(e.target.dataset.tx2Date,'date',e.target.value)));
+    $$("[data-tx2-type]").forEach(i=>i.addEventListener('change', e=>{ setMoneyTx(e.target.dataset.tx2Type,'type',e.target.value); render(); }));
+    $$("[data-tx2-desc]").forEach(i=>i.addEventListener('input', e=>setMoneyTx(e.target.dataset.tx2Desc,'desc',e.target.value)));
+    $$("[data-tx2-account]").forEach(i=>i.addEventListener('change', e=>{ setMoneyTx(e.target.dataset.tx2Account,'accountId',e.target.value); render(); }));
+    $$("[data-tx2-to]").forEach(i=>i.addEventListener('change', e=>{ setMoneyTx(e.target.dataset.tx2To,'toAccountId',e.target.value); render(); }));
+    $$("[data-tx2-amount]").forEach(i=>i.addEventListener('input', e=>{ setMoneyTx(e.target.dataset.tx2Amount,'amount',Number(e.target.value)); render(); }));
+    $$("[data-tx2-del]").forEach(i=>i.addEventListener('click', e=>{
+      DATA.moneyTx = DATA.moneyTx.filter(t=>t.id!==e.target.dataset.tx2Del);
       queueSave(); render();
     }));
   }
@@ -1124,8 +1256,31 @@ function attachHandlers(){
       DATA.monthlyBudget[m][key] = DATA.monthlyBudget[m][key].filter(it=>it.id!==id);
       queueSave(); render();
     }));
-    drawMonthCashFlow('monthCashFlow', m);
   }
+
+  // Charts are drawn last and wrapped in try/catch so a Chart.js hiccup
+  // (e.g. a slow CDN load) can never block the button wiring above.
+  try{
+    if(currentTab==='dashboard'){
+      const list = DATA.bills[currentThisMonth()]||[];
+      if(list.length){
+        const paid = list.filter(b=>b.paid).length;
+        drawDonut('dashDonut', paid, list.length-paid);
+      }
+      drawCashFlowChart('cashFlowChart');
+    }
+    if(currentTab==='bills'){
+      const list = DATA.bills[renderBills._month]||[];
+      const paid = list.filter(b=>b.paid).length;
+      drawDonut('billsDonut', paid, list.length-paid);
+    }
+    if(currentTab==='credit'){
+      drawDonut('ccDonut', creditUsed(), Math.max(0,Number(DATA.creditCard.limit||0)-creditUsed()), true);
+    }
+    if(currentTab==='month'){
+      drawMonthCashFlow('monthCashFlow', currentMonth);
+    }
+  }catch(e){ console.warn('chart draw skipped', e); }
 }
 
 function setBill(id, field, val){
@@ -1139,6 +1294,10 @@ function setSub(id, field, val){
 }
 function setTx(id, field, val){
   const t = DATA.creditCard.transactions.find(x=>x.id===id);
+  if(t){ t[field]=val; queueSave(); }
+}
+function setMoneyTx(id, field, val){
+  const t = DATA.moneyTx.find(x=>x.id===id);
   if(t){ t[field]=val; queueSave(); }
 }
 function setItem(m, key, id, field, val){
