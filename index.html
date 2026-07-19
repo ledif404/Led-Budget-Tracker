@@ -399,9 +399,13 @@ $("#setupSaveBtn").addEventListener('click', ()=>{
   errEl.style.display="none";
   let config;
   try{
-    // allow pasting with or without "const firebaseConfig ="
-    const jsonish = raw.replace(/^[^{]*/,'').replace(/;?\s*$/,'');
-    config = JSON.parse(jsonish);
+    // Firebase's console gives you a JS object literal (unquoted keys), not strict JSON —
+    // grab everything between the first { and the matching last } and evaluate it as JS.
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if(start===-1 || end===-1 || end<start) throw new Error('no object found');
+    const objStr = raw.slice(start, end+1);
+    config = Function('"use strict"; return (' + objStr + ');')();
   }catch(e){
     errEl.textContent = "Couldn't read that config. Paste the full firebaseConfig object, including the curly braces.";
     errEl.style.display="block";
