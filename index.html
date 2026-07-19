@@ -74,6 +74,7 @@ a{color:var(--green-700);}
   font-family:inherit;font-size:14.5px;color:var(--ink);
 }
 .field input:focus,.field textarea:focus,.field select:focus{outline:2px solid var(--green-500);outline-offset:1px;border-color:var(--green-500);}
+.field input:disabled, .field select:disabled {background:#f5f0e3; color:var(--ink-soft); cursor:not-allowed;}
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   padding:11px 18px;border-radius:9px;border:none;font-weight:600;font-size:14px;
@@ -154,8 +155,9 @@ th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
 td input,td select{width:100%;border:1px solid transparent;background:transparent;padding:6px 7px;border-radius:6px;font-family:inherit;font-size:13.5px;}
-td input:hover,td select:hover{border-color:var(--line);}
-td input:focus,td select:focus{background:#fff;border-color:var(--green-500);outline:none;}
+td input:hover:not(:disabled),td select:hover:not(:disabled){border-color:var(--line);}
+td input:focus:not(:disabled),td select:focus:not(:disabled){background:#fff;border-color:var(--green-500);outline:none;}
+td input:disabled, td select:disabled {color:var(--ink-soft); opacity:0.8; cursor:not-allowed;}
 .row-del{background:none;border:none;color:var(--ink-soft);font-size:16px;padding:2px 6px;border-radius:6px;}
 .row-del:hover{color:var(--red);background:#fbe6df;}
 .add-row{margin-top:10px;}
@@ -798,7 +800,7 @@ function yearIncome(){
 
 function yearExpenses(){
   return (DATA.moneyTx||[])
-    .filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentAppYear))
+    .filter(t => ['expense', 'need', 'want'].includes(t.type) && t.date && t.date.startsWith(currentAppYear))
     .reduce((s,t) => s + Number(t.amount||0), 0);
 }
 
@@ -826,7 +828,7 @@ function accountBalance(accId){
   (DATA.moneyTx||[]).forEach(t=>{
     const amt = Number(t.amount||0);
     if(['income', 'salary1', 'salary2'].includes(t.type) && t.accountId===accId) bal += amt;
-    else if((t.type==='expense' || t.type==='investment') && t.accountId===accId) bal -= amt;
+    else if(['expense', 'need', 'want', 'investment'].includes(t.type) && t.accountId===accId) bal -= amt;
     else if(t.type==='transfer'){
       if(t.accountId===accId) bal -= amt;
       if(t.toAccountId===accId) bal += amt;
@@ -863,29 +865,36 @@ function renderAccounts(){
     </div>`;
   }).join('');
 
-  const rows = txs.map(t=>`
+  const rows = txs.map(t=>{
+    const isManaged = (t.linkedBillId || t.linkedBudgetId) ? true : false;
+    const disabledAttr = isManaged ? 'disabled title="Managed automatically from a tracker"' : '';
+    return `
     <tr>
-      <td><input type="date" data-tx2-date="${t.id}" value="${t.date||''}"></td>
+      <td><input type="date" data-tx2-date="${t.id}" value="${t.date||''}" ${disabledAttr}></td>
       <td>
-        <select data-tx2-type="${t.id}">
+        <select data-tx2-type="${t.id}" ${disabledAttr}>
           <option value="income" ${t.type==='income'?'selected':''}>Income</option>
           <option value="salary1" ${t.type==='salary1'?'selected':''}>Salary - 1st Payout</option>
           <option value="salary2" ${t.type==='salary2'?'selected':''}>Salary - 2nd Payout</option>
           <option value="expense" ${t.type==='expense'?'selected':''}>Expense</option>
+          <option value="need" ${t.type==='need'?'selected':''}>Need</option>
+          <option value="want" ${t.type==='want'?'selected':''}>Want</option>
           <option value="transfer" ${t.type==='transfer'?'selected':''}>Transfer</option>
           <option value="investment" ${t.type==='investment'?'selected':''}>Investment</option>
         </select>
       </td>
-      <td><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries"></td>
+      <td><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
       <td>
-        <select data-tx2-account="${t.id}"><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
+        <select data-tx2-account="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
       </td>
       <td>
-        ${t.type==='transfer' ? `<select data-tx2-to="${t.id}"><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
+        ${t.type==='transfer' ? `<select data-tx2-to="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
       </td>
-      <td><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
-      <td style="text-align:right;"><button class="row-del" data-tx2-del="${t.id}">✕</button></td>
-    </tr>`).join('');
+      <td><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
+      <td style="text-align:right;">
+        ${isManaged ? '<span class="hint" title="Delete from the Budget or Bills tab">🔒</span>' : `<button class="row-del" data-tx2-del="${t.id}">✕</button>`}
+      </td>
+    </tr>`}).join('');
 
   return `
   <div class="card stat-card good" style="margin-bottom:16px;max-width:280px;">
@@ -906,7 +915,7 @@ function renderAccounts(){
       <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
     </table>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
-    <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI).</div>
+    <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI). Note: Entries with a 🔒 are managed by your Monthly Budget or Bills Tracker.</div>
   </div>
   `;
 }
@@ -933,8 +942,9 @@ function renderCalendar() {
      
      let txHtml = dayTxs.map(t => {
        let isIncome = ['income', 'salary1', 'salary2'].includes(t.type);
-       let typeClass = isIncome ? 'inc' : (t.type==='expense' ? 'exp' : 'trs');
-       let prefix = isIncome ? '+' : (t.type==='expense' ? '-' : '⇄');
+       let isExpense = ['expense', 'need', 'want'].includes(t.type);
+       let typeClass = isIncome ? 'inc' : (isExpense ? 'exp' : 'trs');
+       let prefix = isIncome ? '+' : (isExpense ? '-' : '⇄');
        return `<div class="cal-tx ${typeClass}" title="${escapeHtml(t.desc)}: ${pesoShort(t.amount)}">
          <span>${prefix}</span> <span>${pesoShort(t.amount)}</span> <span style="opacity:0.7;font-weight:400;margin-left:auto;">${escapeHtml(t.desc)}</span>
        </div>`;
@@ -1278,13 +1288,20 @@ function renderMonth(m){
   const mb = DATA.monthlyBudget[currentAppYear][m];
   const savingsPlan = DATA.savingsPlans[currentAppYear][m];
   const savingsPerPayout = Number(savingsPlan.planned||0)/2;
+  const accounts = DATA.accounts||[];
 
   function itemRows(list, key){
     return list.map(item=>`
       <tr>
-        <td><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item"></td>
+        <td><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
+        <td><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
         <td><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
-        <td><input type="text" data-item-method="${key}:${item.id}" value="${escapeHtml(item.method||'')}" placeholder="e.g. GCash"></td>
+        <td>
+          <select data-item-account="${key}:${item.id}">
+            <option value="">—</option>
+            ${accounts.map(a=>`<option value="${a.id}" ${item.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
+          </select>
+        </td>
         <td>
           <select data-item-payout="${key}:${item.id}">
             <option value="1" ${item.payout==1?'selected':''}>1st payout</option>
@@ -1300,7 +1317,6 @@ function renderMonth(m){
 
   const totalNeeds = totalFor(mb.needs), totalWants = totalFor(mb.wants), totalInv = totalFor(mb.investments);
   
-  // Dynamically calculate payouts via actual Accounts & Money Flow logs.
   const mIdxStr = String(MONTHS.indexOf(m) + 1).padStart(2, '0');
   const prefix = `${currentAppYear}-${mIdxStr}`;
   
@@ -1310,7 +1326,6 @@ function renderMonth(m){
   const payout1 = sal1Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   const payout2 = sal2Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   
-  // Parse Dates to determine distances for bills.
   const date1Str = sal1Txs.length ? sal1Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-15`;
   const date2Str = sal2Txs.length ? sal2Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-28`;
 
@@ -1323,7 +1338,6 @@ function renderMonth(m){
   let billDeduct1 = 0;
   let billDeduct2 = 0;
 
-  // Retrieve all paid bills exactly matching THIS month and THIS year, regardless of the Bill Tracker tab they were added in.
   let paidBills = [];
   Object.keys(DATA.bills[currentAppYear] || {}).forEach(tabMonth => {
     (DATA.bills[currentAppYear][tabMonth] || []).forEach(b => {
@@ -1333,7 +1347,6 @@ function renderMonth(m){
     });
   });
   
-  // Assign bills to payouts based on distance
   paidBills.sort((a,b) => (a.date||'').localeCompare(b.date||'')).forEach(b => {
     const bDate = new Date(b.date || `${prefix}-01`).getTime();
     const amt = Number(b.amount);
@@ -1346,20 +1359,13 @@ function renderMonth(m){
       const dist1 = Math.abs(bDate - d1);
       const dist2 = Math.abs(bDate - d2);
       
-      // If closer to Payout 2
       if (dist2 < dist1) {
-        // Can Payout 2 afford it?
-        if ((payout2 - spent2 - billDeduct2) >= amt) {
-          billDeduct2 += amt;
-        } else {
-          billDeduct1 += amt; // Fallback to Payout 1
-        }
+        if ((payout2 - spent2 - billDeduct2) >= amt) billDeduct2 += amt;
+        else billDeduct1 += amt; 
       } else {
-        // Closer to Payout 1
         billDeduct1 += amt;
       }
     } else {
-      // Default to P1 if neither payout is logged yet
       billDeduct1 += amt;
     }
   });
@@ -1401,22 +1407,22 @@ function renderMonth(m){
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
   <div class="card">
-    <table><thead><tr><th>Item</th><th>Amount</th><th>Payment method</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="5" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="needs">+ Add need</button>
   </div>
 
   <div class="section-title">Wants <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalWants)}</span></div>
   <div class="card">
-    <table><thead><tr><th>Item</th><th>Amount</th><th>Payment method</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="5" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="wants">+ Add want</button>
   </div>
 
   <div class="section-title">Investments <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalInv)}</span></div>
   <div class="card">
-    <table><thead><tr><th>Item</th><th>Amount</th><th>Payment method</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="5" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
   `;
@@ -1576,32 +1582,47 @@ function attachHandlers(){
     const m = currentMonth;
     $$("[data-add-item]").forEach(btn=>btn.addEventListener('click', ()=>{
       const key = btn.dataset.addItem;
-      DATA.monthlyBudget[currentAppYear][m][key].push({id:uid(), name:'', amount:0, method:'', payout:1});
+      DATA.monthlyBudget[currentAppYear][m][key].push({id:uid(), date:'', name:'', amount:0, accountId:'', payout:1});
       queueSave(); render();
     }));
+    
+    $$("[data-item-date]").forEach(i=>i.addEventListener('input', e=>{
+      const [key,id] = e.target.dataset.itemDate.split(':');
+      setItem(m,key,id,'date',e.target.value);
+      syncBudgetToMoneyTx(currentAppYear, m, key, id);
+    }));
+    
     $$("[data-item-name]").forEach(i=>i.addEventListener('input', e=>{
       const [key,id] = e.target.dataset.itemName.split(':');
       setItem(m,key,id,'name',e.target.value);
+      syncBudgetToMoneyTx(currentAppYear, m, key, id);
     }));
     
     $$("[data-item-amount]").forEach(i=>{
       i.addEventListener('input', e=>{
         const [key,id] = e.target.dataset.itemAmount.split(':');
         setItem(m,key,id,'amount',Number(e.target.value));
+        syncBudgetToMoneyTx(currentAppYear, m, key, id);
       });
       i.addEventListener('change', ()=>render());
     });
     
-    $$("[data-item-method]").forEach(i=>i.addEventListener('input', e=>{
-      const [key,id] = e.target.dataset.itemMethod.split(':');
-      setItem(m,key,id,'method',e.target.value);
+    $$("[data-item-account]").forEach(i=>i.addEventListener('change', e=>{
+      const [key,id] = e.target.dataset.itemAccount.split(':');
+      setItem(m,key,id,'accountId',e.target.value);
+      syncBudgetToMoneyTx(currentAppYear, m, key, id);
+      render();
     }));
+    
     $$("[data-item-payout]").forEach(i=>i.addEventListener('change', e=>{
       const [key,id] = e.target.dataset.itemPayout.split(':');
-      setItem(m,key,id,'payout',Number(e.target.value)); render();
+      setItem(m,key,id,'payout',Number(e.target.value)); 
+      render();
     }));
+    
     $$("[data-item-del]").forEach(i=>i.addEventListener('click', e=>{
       const [key,id] = e.target.dataset.itemDel.split(':');
+      DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBudgetId !== id);
       DATA.monthlyBudget[currentAppYear][m][key] = DATA.monthlyBudget[currentAppYear][m][key].filter(it=>it.id!==id);
       queueSave(); render();
     }));
@@ -1629,15 +1650,19 @@ function attachHandlers(){
 }
 
 function setBill(id, field, val){
-  // Update bill logic to parse date accurately instead of relying on the active tab
-  const m = renderBills._month;
-  const b = DATA.bills[currentAppYear][m].find(x=>x.id===id);
-  if(b){ b[field]=val; queueSave(); }
+  let found = false;
+  Object.keys(DATA.bills[currentAppYear] || {}).forEach(m => {
+    const b = DATA.bills[currentAppYear][m].find(x=>x.id===id);
+    if(b){ b[field]=val; queueSave(); found=true; }
+  });
 }
 
 function syncBillToMoneyTx(billId) {
-  const m = renderBills._month;
-  const b = DATA.bills[currentAppYear][m].find(x=>x.id===billId);
+  let b = null;
+  Object.keys(DATA.bills[currentAppYear] || {}).forEach(m => {
+    const bill = DATA.bills[currentAppYear][m].find(x=>x.id===billId);
+    if(bill) b = bill;
+  });
   if(!b) return;
 
   let txIndex = DATA.moneyTx.findIndex(t => t.linkedBillId === billId);
@@ -1658,6 +1683,44 @@ function syncBillToMoneyTx(billId) {
         accountId: b.accountId,
         toAccountId: '',
         amount: Number(b.amount)
+      });
+    }
+  } else {
+    if (txIndex >= 0) {
+      DATA.moneyTx.splice(txIndex, 1);
+    }
+  }
+  queueSave();
+}
+
+function syncBudgetToMoneyTx(year, month, category, itemId) {
+  const item = DATA.monthlyBudget[year][month][category].find(x=>x.id===itemId);
+  if(!item) return;
+
+  let txIndex = DATA.moneyTx.findIndex(t => t.linkedBudgetId === itemId);
+
+  let mappedType = 'expense';
+  if(category === 'needs') mappedType = 'need';
+  if(category === 'wants') mappedType = 'want';
+  if(category === 'investments') mappedType = 'investment';
+
+  if (item.date && item.accountId && Number(item.amount) > 0) {
+    if (txIndex >= 0) {
+      DATA.moneyTx[txIndex].amount = Number(item.amount);
+      DATA.moneyTx[txIndex].accountId = item.accountId;
+      DATA.moneyTx[txIndex].desc = item.name || 'Budget Item';
+      DATA.moneyTx[txIndex].date = item.date;
+      DATA.moneyTx[txIndex].type = mappedType;
+    } else {
+      DATA.moneyTx.push({
+        id: uid(),
+        linkedBudgetId: itemId,
+        date: item.date,
+        type: mappedType,
+        desc: item.name || 'Budget Item',
+        accountId: item.accountId,
+        toAccountId: '',
+        amount: Number(item.amount)
       });
     }
   } else {
@@ -1716,7 +1779,7 @@ function drawCashFlowChart(canvasId){
   const expenseData = visibleMonths.map((m) => {
     const mIdx = MONTHS.indexOf(m);
     return (DATA.moneyTx||[]).filter(t => {
-      if (t.type !== 'expense' || !t.date || !t.date.startsWith(currentAppYear)) return false;
+      if (!['expense', 'need', 'want'].includes(t.type) || !t.date || !t.date.startsWith(currentAppYear)) return false;
       return parseInt(t.date.split('-')[1], 10) - 1 === mIdx;
     }).reduce((s, t) => s + Number(t.amount||0), 0);
   });
