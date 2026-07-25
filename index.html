@@ -150,7 +150,8 @@ a{color:var(--green-700);}
 .stat-card.good .num{color:var(--green-700);}
 
 /* Default Table Styles */
-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;}
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
@@ -163,6 +164,9 @@ td input:disabled, td select:disabled {color:var(--ink-soft); opacity:0.8; curso
 .add-row{margin-top:10px;}
 .checkbox{width:17px;height:17px;accent-color:var(--green-700);}
 td.empty-note { font-style: italic; text-align: center; border:none; padding:10px; }
+
+/* Collapsible Row Logic (Desktop disables it) */
+.collapsible-tr::after { display: none; }
 
 .progress-bar{height:9px;background:var(--paper-2);border-radius:6px;overflow:hidden;margin-top:8px;}
 .progress-bar > div{height:100%;background:linear-gradient(90deg,var(--green-600),var(--gold));border-radius:6px;transition:width .4s ease;}
@@ -200,7 +204,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .calendar-grid {
   display: grid; grid-template-columns: repeat(7, 1fr);
   border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
-  background: var(--line); gap: 1px;
+  background: var(--line); gap: 1px; min-width:600px;
 }
 .cal-head {
   background: var(--paper-2); color: var(--ink-soft); text-align: center; font-weight: 700;
@@ -246,36 +250,61 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .card { padding:16px; }
   .stat-card .num { font-size:24px; }
 
-  /* Mobile Responsive Tables (Stacked Cards) */
+  /* Mobile Responsive Tables (Stacked Accordion Cards) */
   table { min-width: 0; display: block; }
   thead { display: none; }
   tbody { display: block; width: 100%; }
-  tr { display: block; width: 100%; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-  td { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--line); text-align: right; }
+  
+  tr:not(.collapsible-tr) { display: block; width: 100%; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  
+  tr.collapsible-tr {
+    display: block; width: 100%; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 8px; 
+    padding: 8px 12px 28px 12px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; cursor: pointer;
+  }
+  tr.collapsible-tr::after {
+    display: block; content: "▼ Tap to view/edit details"; position: absolute; bottom: 0; left: 0; right: 0;
+    background: var(--paper-2); color: var(--green-700); text-align: center; font-size: 11px; font-weight: 600;
+    padding: 6px 0; border-radius: 0 0 8px 8px;
+  }
+  tr.collapsible-tr.open::after { content: "▲ Hide details"; }
+
+  td { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); text-align: right; }
   td:last-child { border-bottom: none; justify-content: flex-end; }
   
   td::before { content: attr(data-label); font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--ink-soft); margin-right: 12px; text-align: left; flex-shrink: 0; }
   td.empty-note::before { content: none; }
   td.empty-note { justify-content: center; border: none; background: transparent; box-shadow: none; padding: 10px; }
   
+  /* Hide specific fields in mobile until row is opened */
+  tr.collapsible-tr td.hide-mobile { display: none !important; }
+  tr.collapsible-tr.open td.hide-mobile { display: flex !important; }
+  
   /* Align inputs perfectly inside flex td */
   td input[type="text"], td input[type="number"], td input[type="date"], td select { 
-    width: 100%; max-width: 200px; text-align: right; text-align-last: right; 
+    width: 100%; max-width: 180px; text-align: right; text-align-last: right; 
   }
   td select { direction: rtl; }
   td select option { direction: ltr; }
   td input[type="checkbox"] { margin: 0; width: 20px; height: 20px; }
   .row-del { margin-left: auto; }
 
-  /* Mobile Calendar Morph */
-  .calendar-grid { display: block; background: transparent; border: none; min-width: 0; }
-  .cal-head { display: none; }
-  .cal-cell.empty { display: none; }
-  .cal-cell { display: block; min-height: 0; padding: 14px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; background: #fff; }
-  .cal-date { font-size: 14px; margin-bottom: 10px; }
-  .desktop-date { display: none; }
-  .mobile-date { display: inline; color: var(--green-700); font-weight: 700; background: #e3f0e6; padding: 3px 8px; border-radius: 6px; }
-  .cal-tx { font-size: 12px; padding: 6px 8px; margin-bottom: 4px; border-radius: 6px; }
+  /* Mobile Grid Calendar Restore */
+  .calendar-grid { 
+    display: grid !important; grid-template-columns: repeat(7, 1fr) !important;
+    min-width: 100% !important; border: 1px solid var(--line) !important;
+    background: var(--line) !important; gap: 1px !important;
+  }
+  .cal-head { display: block !important; font-size: 9px !important; padding: 6px 0 !important; }
+  .cal-cell.empty { display: block !important; background: #faf9f5 !important; }
+  .cal-cell {
+    display: flex !important; flex-direction: column !important; gap: 2px !important;
+    padding: 4px !important; min-height: 50px !important; border-radius: 0 !important; border: none !important; margin-bottom: 0 !important;
+  }
+  .cal-date { font-size: 10px !important; margin-bottom: 2px !important; }
+  .cal-tx { font-size: 9px !important; padding: 2px !important; flex-direction: column !important; align-items: flex-start !important; }
+  .tx-desc { display: none !important; } /* Hide description to maintain grid structure on small screens */
+  .desktop-date { display: inline !important; }
+  .mobile-date { display: none !important; }
 }
 </style>
 </head>
@@ -887,7 +916,7 @@ function renderAccounts(){
     const isManaged = (t.linkedBillId || t.linkedBudgetId) ? true : false;
     const disabledAttr = isManaged ? 'disabled title="Managed automatically from a tracker"' : '';
     return `
-    <tr>
+    <tr class="collapsible-tr">
       <td data-label="Date"><input type="date" data-tx2-date="${t.id}" value="${t.date||''}" ${disabledAttr}></td>
       <td data-label="Type">
         <select data-tx2-type="${t.id}" ${disabledAttr}>
@@ -902,14 +931,14 @@ function renderAccounts(){
         </select>
       </td>
       <td data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
-      <td data-label="Account">
+      <td data-label="Account" class="hide-mobile">
         <select data-tx2-account="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
       </td>
-      <td data-label="To (Transfer)">
+      <td data-label="To (Transfer)" class="hide-mobile">
         ${t.type==='transfer' ? `<select data-tx2-to="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
       </td>
       <td data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
-      <td data-label="Remove" style="text-align:right;">
+      <td data-label="Remove" class="hide-mobile" style="text-align:right;">
         ${isManaged ? '<span class="hint" title="Delete from the Budget or Bills tab">🔒</span>' : `<button class="row-del" data-tx2-del="${t.id}">✕</button>`}
       </td>
     </tr>`}).join('');
@@ -927,11 +956,13 @@ function renderAccounts(){
   <button class="btn small ghost add-row" id="addAccountBtn" style="margin-top:12px;">+ Add account or bank</button>
 
   <div class="section-title">Money flow — every peso in, out, or moved</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Account</th><th class="hide-mobile">To (transfer)</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+      </table>
+    </div>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
     <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI). Note: Entries with a 🔒 are managed by your Monthly Budget or Bills Tracker.</div>
   </div>
@@ -958,7 +989,6 @@ function renderCalendar() {
      const dateStr = `${y}-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
      const dayTxs = monthTxs.filter(t => t.date === dateStr);
      
-     // Used for the mobile label view
      const dateObj = new Date(y, mIdx, d);
      const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
      
@@ -968,13 +998,11 @@ function renderCalendar() {
        let typeClass = isIncome ? 'inc' : (isExpense ? 'exp' : 'trs');
        let prefix = isIncome ? '+' : (isExpense ? '-' : '⇄');
        return `<div class="cal-tx ${typeClass}" title="${escapeHtml(t.desc)}: ${pesoShort(t.amount)}">
-         <span>${prefix}</span> <span>${pesoShort(t.amount)}</span> <span style="opacity:0.7;font-weight:400;margin-left:auto;">${escapeHtml(t.desc)}</span>
+         <span>${prefix}</span> <span>${pesoShort(t.amount)}</span> <span class="tx-desc" style="opacity:0.7;font-weight:400;margin-left:auto;">${escapeHtml(t.desc)}</span>
        </div>`;
      }).join('');
 
-     // On mobile, hide the cell completely if there are no transactions
-     let cellClass = dayTxs.length > 0 ? "cal-cell has-tx" : "cal-cell no-tx";
-     cells.push(`<div class="${cellClass}"><div class="cal-date"><span class="desktop-date">${d}</span><span class="mobile-date">${dayName}, ${calendarMonth} ${d}</span></div>${txHtml}</div>`);
+     cells.push(`<div class="cal-cell"><div class="cal-date"><span class="desktop-date">${d}</span></div>${txHtml}</div>`);
   }
   
   const padding = (7 - (cells.length % 7)) % 7;
@@ -990,10 +1018,12 @@ function renderCalendar() {
       <select id="calMonthSel" class="cal-select">${monthOpts}</select>
       <select id="calYearSel" class="cal-select">${yearOpts}</select>
     </div>
-    <div class="calendar-grid">
-      <div class="cal-head">Sun</div><div class="cal-head">Mon</div><div class="cal-head">Tue</div>
-      <div class="cal-head">Wed</div><div class="cal-head">Thu</div><div class="cal-head">Fri</div><div class="cal-head">Sat</div>
-      ${cells.join('')}
+    <div class="table-responsive">
+      <div class="calendar-grid">
+        <div class="cal-head">Sun</div><div class="cal-head">Mon</div><div class="cal-head">Tue</div>
+        <div class="cal-head">Wed</div><div class="cal-head">Thu</div><div class="cal-head">Fri</div><div class="cal-head">Sat</div>
+        ${cells.join('')}
+      </div>
     </div>
   `;
 }
@@ -1134,11 +1164,13 @@ function renderSavings(){
   </div>
 
   <div class="section-title">Monthly savings plan</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
     <div class="hint" style="margin-top:12px;">Checking a month splits that amount across the two payouts in that month's Monthly Budget tab automatically. Future months are locked until they arrive.</div>
   </div>
   `;
@@ -1165,26 +1197,26 @@ function renderBills(){
   const accounts = DATA.accounts||[];
 
   const rows = list.map((b,idx)=>`
-    <tr>
-      <td data-label="#">${idx+1}</td>
+    <tr class="collapsible-tr">
+      <td data-label="#" class="hide-mobile">${idx+1}</td>
       <td data-label="Due Date"><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
       <td data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
       <td data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
-      <td data-label="Paid Via">
+      <td data-label="Paid Via" class="hide-mobile">
         <select data-bill-account="${b.id}">
           <option value="">—</option>
           ${accounts.map(a=>`<option value="${a.id}" ${b.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
         </select>
       </td>
       <td data-label="Paid?"><input type="checkbox" class="checkbox" data-bill-paid="${b.id}" ${b.paid?'checked':''}></td>
-      <td data-label="Remove" style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
+      <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
     </tr>`).join('');
 
   const subRows = (DATA.subscriptions||[]).map((s,idx)=>`
-    <tr>
+    <tr class="collapsible-tr">
       <td data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
       <td data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
-      <td data-label="Remove" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
+      <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
     </tr>`).join('');
   const subTotal = (DATA.subscriptions||[]).reduce((s,i)=>s+Number(i.amount||0),0);
 
@@ -1192,12 +1224,14 @@ function renderBills(){
   <div class="month-picker-tabs">${tabs}</div>
 
   <div class="grid cols-2">
-    <div class="card">
+    <div class="card" style="padding:12px 16px;">
       <h3>Bills &amp; Subscriptions — ${MONTH_NAMES[activeMonth]}</h3>
-      <table>
-        <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
-      </table>
+      <div class="table-responsive">
+        <table>
+          <thead><tr><th class="hide-mobile">#</th><th>Due date</th><th>Bill</th><th>Amount</th><th class="hide-mobile">Paid via</th><th style="text-align:center;">Paid</th><th class="hide-mobile"></th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
+        </table>
+      </div>
       <button class="btn small ghost add-row" id="addBillBtn">+ Add bill</button>
     </div>
     <div class="card">
@@ -1214,11 +1248,13 @@ function renderBills(){
   </div>
 
   <div class="section-title">Recurring credit card bills</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Subscription</th><th>Monthly amount</th><th></th></tr></thead>
-      <tbody>${subRows || `<tr><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Subscription</th><th>Monthly amount</th><th class="hide-mobile"></th></tr></thead>
+        <tbody>${subRows || `<tr><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
+      </table>
+    </div>
     <button class="btn small ghost add-row" id="addSubBtn">+ Add subscription</button>
     <div class="hint" style="margin-top:10px;">Total recurring: <b class="mono">${peso(subTotal)}</b> / month</div>
   </div>
@@ -1239,7 +1275,7 @@ function renderCredit(){
   const txs = (DATA.creditCard.transactions||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
 
   const rows = txs.map(t=>`
-    <tr>
+    <tr class="collapsible-tr">
       <td data-label="Date"><input type="date" data-tx-date="${t.id}" value="${t.date||''}"></td>
       <td data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries"></td>
       <td data-label="Type">
@@ -1249,7 +1285,7 @@ function renderCredit(){
         </select>
       </td>
       <td data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
-      <td data-label="Remove" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
+      <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
     </tr>`).join('');
 
   return `
@@ -1274,11 +1310,13 @@ function renderCredit(){
   </div>
 
   <div class="section-title">Transactions</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
+      </table>
+    </div>
     <button class="btn small ghost add-row" id="addTxBtn">+ Add transaction</button>
     <div class="hint" style="margin-top:10px;">Charge increases what you've used. Payment reduces it — pay your statement in full to reset available credit.</div>
   </div>
@@ -1316,23 +1354,23 @@ function renderMonth(m){
 
   function itemRows(list, key){
     return list.map(item=>`
-      <tr>
+      <tr class="collapsible-tr">
         <td data-label="Date"><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
         <td data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
         <td data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
-        <td data-label="Account">
+        <td data-label="Account" class="hide-mobile">
           <select data-item-account="${key}:${item.id}">
             <option value="">—</option>
             ${accounts.map(a=>`<option value="${a.id}" ${item.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
           </select>
         </td>
-        <td data-label="Payout">
+        <td data-label="Payout" class="hide-mobile">
           <select data-item-payout="${key}:${item.id}">
             <option value="1" ${item.payout==1?'selected':''}>1st payout</option>
             <option value="2" ${item.payout==2?'selected':''}>2nd payout</option>
           </select>
         </td>
-        <td data-label="Remove" style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
+        <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
       </tr>`).join('');
   }
 
@@ -1430,23 +1468,29 @@ function renderMonth(m){
   </div>
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
-  <div class="card">
-    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
+      <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
+    </div>
     <button class="btn small ghost add-row" data-add-item="needs">+ Add need</button>
   </div>
 
   <div class="section-title">Wants <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalWants)}</span></div>
-  <div class="card">
-    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
+      <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
+    </div>
     <button class="btn small ghost add-row" data-add-item="wants">+ Add want</button>
   </div>
 
   <div class="section-title">Investments <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalInv)}</span></div>
-  <div class="card">
-    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
+      <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
+    </div>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
   `;
@@ -1597,6 +1641,10 @@ function attachHandlers(){
     $("#setSavings")?.addEventListener('input', e=>{ DATA.profile.savingsRatio = Number(e.target.value)/100; queueSave(); });
     $("#setSpending")?.addEventListener('input', e=>{ DATA.profile.spendingRatio = Number(e.target.value)/100; queueSave(); });
     $("#setInvesting")?.addEventListener('input', e=>{ DATA.profile.investingRatio = Number(e.target.value)/100; queueSave(); });
+    $("#switchProjectBtn")?.addEventListener('click', ()=>{
+      localStorage.removeItem('ledger_fb_config');
+      location.reload();
+    });
   }
   if(currentTab==='month'){
     const m = currentMonth;
@@ -1668,6 +1716,18 @@ function attachHandlers(){
     }
   }catch(e){ console.warn('chart draw skipped', e); }
 }
+
+// Universal tap listener for Mobile Collapsible Rows (Accordion)
+document.addEventListener('click', e => {
+  if (window.innerWidth > 860) return; // Only apply on mobile
+  const tr = e.target.closest('.collapsible-tr');
+  if(tr) {
+    // Ignore clicks if they tapped on an input, button, or select dropdown
+    const tag = e.target.tagName;
+    if(tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON' || e.target.closest('.checkbox') || e.target.closest('.row-del')) return;
+    tr.classList.toggle('open');
+  }
+});
 
 function setBill(id, field, val){
   let found = false;
