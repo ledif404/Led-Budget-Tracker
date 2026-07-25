@@ -220,11 +220,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-tx.exp { background: #fbe6df; color: var(--red); }
 .cal-tx.trs { background: #f5f0e3; color: var(--gold); }
 
-.setup-config-box{background:#0e3b26;color:#e9e3cf;padding:12px 14px;border-radius:9px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.6;overflow-x:auto;white-space:pre;margin:10px 0;}
-.step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--green-700);color:#fff;font-size:11px;font-weight:700;margin-right:8px;flex-shrink:0;}
-.step{display:flex;align-items:flex-start;margin-bottom:12px;font-size:13px;color:var(--ink-soft);}
-.step b{color:var(--ink);}
-
 .mobile-nav-toggle{display:none;}
 @media(max-width:860px){
   #app.active{flex-direction:column;}
@@ -238,35 +233,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 </style>
 </head>
 <body>
-
-<!-- ============ SETUP SCREEN (Firebase config) ============ -->
-<div id="setupScreen" class="screen">
-  <div class="passbook" style="max-width:520px;">
-    <div class="passbook-top">
-      <div class="eyebrow">Step 1 of 2 · One-time setup</div>
-      <h1>Connect your Ledger</h1>
-      <p>Your budget lives in your own free Firebase project — private to you, synced across every device you log into.</p>
-    </div>
-    <div class="passbook-body">
-      <div class="step"><span class="step-num">1</span><div>Go to <b>console.firebase.google.com</b> → create a project (any name).</div></div>
-      <div class="step"><span class="step-num">2</span><div>Build → <b>Firestore Database</b> → Create database → start in <b>test mode</b>.</div></div>
-      <div class="step"><span class="step-num">3</span><div>Build → <b>Authentication</b> → Sign-in method → enable <b>Email/Password</b>.</div></div>
-      <div class="step"><span class="step-num">4</span><div>Project settings → your apps → Add app → Web (&lt;/&gt;) → copy the <b>firebaseConfig</b> object and paste it below.</div></div>
-      <div class="field">
-        <label for="fbConfigInput">Paste your firebaseConfig</label>
-        <textarea id="fbConfigInput" rows="7" placeholder='{
-  "apiKey": "...",
-  "authDomain": "...",
-  "projectId": "...",
-  ...
-}'></textarea>
-      </div>
-      <div id="setupError" class="error-msg"></div>
-      <button class="btn block gold" id="setupSaveBtn">Save & continue</button>
-      <p class="hint">This is stored only in this browser's local storage and sent straight to Google's Firebase — it never passes through anyone else's server. Each device needs this pasted in once.</p>
-    </div>
-  </div>
-</div>
 
 <!-- ============ AUTH SCREEN ============ -->
 <div id="authScreen" class="screen hidden">
@@ -290,8 +256,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
       <div class="link-row">
         <span id="authToggleText">New here?</span> <button id="authToggleBtn">Create an account</button>
       </div>
-      <div class="divider-word">or</div>
-      <button class="btn block ghost" id="changeConfigBtn">Use a different Firebase project</button>
     </div>
   </div>
 </div>
@@ -439,7 +403,7 @@ const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 
 function showScreen(id){
-  ["setupScreen","authScreen"].forEach(s=>$("#"+s).classList.add("hidden"));
+  ["authScreen"].forEach(s=>$("#"+s).classList.add("hidden"));
   $("#app").classList.remove("active");
   if(id) $("#"+id).classList.remove("hidden");
   else $("#app").classList.add("active");
@@ -543,7 +507,10 @@ async function loadUserData(){
       await docRef().set(DATA);
     }
   }catch(e){
-    console.error(e);
+    console.error("Firestore Load Error:", e);
+    if(e.code === 'permission-denied') {
+        alert("⚠️ Cannot load data: Firebase permissions denied. Your Firestore rules may be set to false or expired. Please update them in the Firebase Console to allow reads/writes.");
+    }
     DATA = defaultData();
   }
   wireSidebarYear();
@@ -593,7 +560,12 @@ async function doSave(){
   try{
     await docRef().set(DATA);
     flashSaved();
-  }catch(e){ console.error("save failed", e); }
+  }catch(e){ 
+    console.error("save failed", e); 
+    if(e.code === 'permission-denied') {
+        alert("⚠️ Cannot save data: Firebase permissions denied. Please check your Firestore Rules.");
+    }
+  }
 }
 function flashSaved(){
   const pill = $("#savedPill");
@@ -1249,7 +1221,7 @@ function renderSettings(){
       <h3>Account</h3>
       <div class="hint">Logged in as <b>${escapeHtml(currentUser.email||'')}</b></div>
       <div class="hint" style="margin-top:8px;">Your data syncs automatically to any device you log into with this account.</div>
-      <button class="btn danger small" id="switchProjectBtn" style="margin-top:14px;">Use a different Firebase project</button>
+      <button class="btn danger small" id="switchProjectBtn" style="margin-top:14px; display:none;">Use a different Firebase project</button>
     </div>
   </div>
   `;
@@ -1545,10 +1517,6 @@ function attachHandlers(){
     $("#setSavings")?.addEventListener('input', e=>{ DATA.profile.savingsRatio = Number(e.target.value)/100; queueSave(); });
     $("#setSpending")?.addEventListener('input', e=>{ DATA.profile.spendingRatio = Number(e.target.value)/100; queueSave(); });
     $("#setInvesting")?.addEventListener('input', e=>{ DATA.profile.investingRatio = Number(e.target.value)/100; queueSave(); });
-    $("#switchProjectBtn")?.addEventListener('click', ()=>{
-      localStorage.removeItem('ledger_fb_config');
-      location.reload();
-    });
   }
   if(currentTab==='month'){
     const m = currentMonth;
