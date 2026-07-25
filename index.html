@@ -513,11 +513,15 @@ const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 
 function showScreen(id){
-  ["authScreen"].forEach(s=>$("#"+s).classList.add("hidden"));
-  $("#app").classList.remove("active");
-  $("#app").style.display = ''; // Reset any inline styles
-  if(id) $("#"+id).classList.remove("hidden");
-  else $("#app").classList.add("active");
+  if(id === 'authScreen') {
+    $("#authScreen").classList.remove("hidden");
+    $("#app").classList.remove("active");
+    $("#app").style.display = "none"; 
+  } else {
+    $("#authScreen").classList.add("hidden");
+    $("#app").classList.add("active");
+    $("#app").style.display = "flex"; 
+  }
 }
 
 function initFirebase(config){
@@ -626,7 +630,7 @@ $("#logoutBtn").addEventListener('click', ()=>{
   auth.signOut();
   DATA=null;
   
-  // Cleanly close the mobile sidebar and any open popups on logout
+  // Force UI reset so sidebars and overlays don't stick around on the login screen
   const sidebar = $(".sidebar");
   const overlay = $("#sidebarOverlay");
   if(sidebar) sidebar.classList.remove("open");
@@ -635,6 +639,9 @@ $("#logoutBtn").addEventListener('click', ()=>{
   activeModalRowId = null;
   const tableModalOverlay = document.getElementById('tableModalOverlay');
   if(tableModalOverlay) tableModalOverlay.classList.remove('show');
+  
+  // Wipe the dashboard HTML so no user data remains temporarily
+  $("#tabContent").innerHTML = "";
   
   showScreen('authScreen');
 });
