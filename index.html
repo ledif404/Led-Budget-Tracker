@@ -351,6 +351,18 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
    THE LEDger — Gen Z Budget Passbook
    ========================================================================= */
 
+// 🛑 AUTOMATICALLY CONNECTED TO FIREBASE 🛑
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD6a9cOcVKsJuElIMdUKXr9f_dOS2KECvk",
+  authDomain: "budgettracker-d66d5.firebaseapp.com",
+  databaseURL: "https://budgettracker-d66d5-default-rtdb.firebaseio.com",
+  projectId: "budgettracker-d66d5",
+  storageBucket: "budgettracker-d66d5.firebasestorage.app",
+  messagingSenderId: "308750162503",
+  appId: "1:308750162503:web:90c4f48192483538c6ef62",
+  measurementId: "G-Q4E4K5C483"
+};
+
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_NAMES = {Jan:"January",Feb:"February",Mar:"March",Apr:"April",May:"May",Jun:"June",Jul:"July",Aug:"August",Sep:"September",Oct:"October",Nov:"November",Dec:"December"};
 
@@ -447,11 +459,10 @@ function initFirebase(config){
 }
 
 function boot(){
-  const savedConfig = localStorage.getItem('ledger_fb_config');
-  if(!savedConfig){ showScreen('setupScreen'); return; }
-  let config;
-  try{ config = JSON.parse(savedConfig); }catch(e){ showScreen('setupScreen'); return; }
-  if(!initFirebase(config)){ showScreen('setupScreen'); return; }
+  if(!initFirebase(FIREBASE_CONFIG)){
+    alert("Firebase config is missing or invalid. Please check the FIREBASE_CONFIG variable in the code.");
+    return;
+  }
   showScreen('authScreen');
   auth.onAuthStateChanged(user=>{
     if(user){ currentUser = user; loadUserData(); }
@@ -459,46 +470,7 @@ function boot(){
   });
 }
 
-/* ---------------- Settings & Auth Handlers ---------------- */
-$("#setupSaveBtn").addEventListener('click', ()=>{
-  const raw = $("#fbConfigInput").value.trim();
-  const errEl = $("#setupError");
-  errEl.style.display="none";
-  let config;
-  try{
-    const start = raw.indexOf('{');
-    const end = raw.lastIndexOf('}');
-    if(start===-1 || end===-1 || end<start) throw new Error('no object found');
-    const objStr = raw.slice(start, end+1);
-    config = Function('"use strict"; return (' + objStr + ');')();
-  }catch(e){
-    errEl.textContent = "Couldn't read that config. Paste the full firebaseConfig object, including the curly braces.";
-    errEl.style.display="block";
-    return;
-  }
-  if(!config.apiKey || !config.projectId){
-    errEl.textContent = "That config is missing apiKey or projectId — copy it fresh from Firebase project settings.";
-    errEl.style.display="block";
-    return;
-  }
-  localStorage.setItem('ledger_fb_config', JSON.stringify(config));
-  if(!initFirebase(config)){
-    errEl.textContent = "Firebase couldn't initialize with that config. Double-check it and try again.";
-    errEl.style.display="block";
-    return;
-  }
-  showScreen('authScreen');
-  auth.onAuthStateChanged(user=>{
-    if(user){ currentUser = user; loadUserData(); }
-    else { currentUser = null; showScreen('authScreen'); }
-  });
-});
-
-$("#changeConfigBtn").addEventListener('click', ()=>{
-  localStorage.removeItem('ledger_fb_config');
-  location.reload();
-});
-
+/* ---------------- Auth Handlers ---------------- */
 let authMode = 'login';
 $("#authToggleBtn").addEventListener('click', ()=>{
   authMode = authMode==='login' ? 'signup' : 'login';
