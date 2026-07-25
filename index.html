@@ -159,9 +159,14 @@ a{color:var(--green-700);}
 .stat-card.warn .num{color:var(--red);}
 .stat-card.good .num{color:var(--green-700);}
 
-/* Swipeable Tables Container & Default Desktop Table Styles */
+<<<<<<< HEAD
+/* Swipeable Tables Container */
 .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;} /* forces scroll on small screens */
+=======
+/* Default Desktop Table Styles */
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;}
+>>>>>>> origin/main
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
@@ -212,7 +217,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-select-wrap { display: flex; gap: 8px; margin-bottom: 16px; align-items:center; }
 .cal-select { padding: 6px 10px; border-radius: 6px; border: 1.5px solid var(--line); font-weight: 600; font-family: inherit; font-size: 14px; background:#fff;}
 .calendar-grid {
-  display: grid; grid-template-columns: repeat(7, 1fr);
+  display: grid; grid-template-columns: repeat(7, 1fr); min-width: 600px;
   border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   background: var(--line); gap: 1px; min-width:600px;
 }
@@ -234,18 +239,24 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-tx.exp { background: #fbe6df; color: var(--red); }
 .cal-tx.trs { background: #f5f0e3; color: var(--gold); }
 
+<<<<<<< HEAD
 .empty-note{color:var(--ink-soft);font-size:12.5px;padding:10px 2px;}
 
+=======
+>>>>>>> origin/main
 /* ---------- Mobile Responsive Overrides ---------- */
 .mobile-header { display:none; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--green-950); color:var(--gold); }
 .mobile-header h1 { margin:0; font-size:18px; font-weight:600; font-family:'Fraunces', serif; color:var(--paper); }
 .mobile-menu-btn { background:none; border:none; color:var(--gold); font-size:24px; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:90; opacity:0; transition: opacity 0.3s ease; }
 .sidebar-overlay.show { display:block; opacity:1; }
+<<<<<<< HEAD
+=======
 
 /* Mobile Modal Overlay */
 .table-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; }
 .table-modal-overlay.show { display:block; }
+>>>>>>> origin/main
 
 @media(max-width:860px){
   #app.active{flex-direction:column;}
@@ -262,6 +273,11 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .topbar h2 { font-size: 22px; }
   
   .grid.cols-2, .grid.cols-3, .grid.cols-4, .payout-cols { grid-template-columns:1fr; }
+<<<<<<< HEAD
+  
+  .card { padding:16px; }
+  .stat-card .num { font-size:24px; }
+=======
   .card { padding:16px; }
   .stat-card .num { font-size:24px; }
 
@@ -340,6 +356,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .cal-tx .tx-desc { display: none !important; } 
   .desktop-date { display: inline !important; }
   .mobile-date { display: none !important; }
+>>>>>>> origin/main
 }
 </style>
 </head>
@@ -378,7 +395,10 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
     <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
   </div>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<<<<<<< HEAD
+=======
   <div class="table-modal-overlay" id="tableModalOverlay"></div>
+>>>>>>> origin/main
 
   <aside class="sidebar">
     <div class="sb-brand">
@@ -572,6 +592,8 @@ function toggleMobileMenu() {
 $("#mobileMenuBtn")?.addEventListener('click', toggleMobileMenu);
 $("#sidebarOverlay")?.addEventListener('click', toggleMobileMenu);
 
+<<<<<<< HEAD
+=======
 /* ---------------- Mobile Table Modal Handlers ---------------- */
 function openRowModal(id) {
   if (window.innerWidth > 860) return; // Only apply on mobile
@@ -584,6 +606,7 @@ function closeRowModal() {
 }
 $("#tableModalOverlay")?.addEventListener('click', closeRowModal);
 
+>>>>>>> origin/main
 /* ---------------- Auth Handlers ---------------- */
 let authMode = 'login';
 $("#authToggleBtn").addEventListener('click', ()=>{
@@ -1043,11 +1066,19 @@ function renderAccounts(){
   <button class="btn small ghost add-row" id="addAccountBtn" style="margin-top:12px;">+ Add account or bank</button>
 
   <div class="section-title">Money flow — every peso in, out, or moved</div>
+<<<<<<< HEAD
+  <div class="card">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table>
         <thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Account</th><th class="hide-mobile">To (transfer)</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
         <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+>>>>>>> origin/main
       </table>
     </div>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
@@ -1257,7 +1288,11 @@ function renderSavings(){
   </div>
 
   <div class="section-title">Monthly savings plan</div>
+<<<<<<< HEAD
+  <div class="card">
+=======
   <div class="card" style="padding:12px 16px;">
+>>>>>>> origin/main
     <div class="table-responsive">
       <table>
         <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
@@ -1351,8 +1386,13 @@ function renderBills(){
       <h3>Bills &amp; Subscriptions — ${MONTH_NAMES[activeMonth]}</h3>
       <div class="table-responsive">
         <table>
+<<<<<<< HEAD
+          <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
+=======
           <thead><tr><th class="hide-mobile">#</th><th>Due date</th><th>Bill</th><th>Amount</th><th class="hide-mobile">Paid via</th><th style="text-align:center;">Paid</th><th class="hide-mobile"></th></tr></thead>
           <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
+>>>>>>> origin/main
         </table>
       </div>
       <button class="btn small ghost add-row" id="addBillBtn">+ Add bill</button>
@@ -1371,11 +1411,19 @@ function renderBills(){
   </div>
 
   <div class="section-title">Recurring credit card bills</div>
+<<<<<<< HEAD
+  <div class="card">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Subscription</th><th>Monthly amount</th><th></th></tr></thead>
+        <tbody>${subRows || `<tr><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
+=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table>
         <thead><tr><th>Subscription</th><th>Monthly amount</th><th class="hide-mobile"></th></tr></thead>
         <tbody>${subRows || `<tr class="no-modal"><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
+>>>>>>> origin/main
       </table>
     </div>
     <button class="btn small ghost add-row" id="addSubBtn">+ Add subscription</button>
@@ -1450,11 +1498,19 @@ function renderCredit(){
   </div>
 
   <div class="section-title">Transactions</div>
+<<<<<<< HEAD
+  <div class="card">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
+=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table>
         <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
         <tbody>${rows || `<tr class="no-modal"><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
+>>>>>>> origin/main
       </table>
     </div>
     <button class="btn small ghost add-row" id="addTxBtn">+ Add transaction</button>
@@ -1625,28 +1681,49 @@ function renderMonth(m){
   </div>
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
+<<<<<<< HEAD
+  <div class="card">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+      <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
+=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
       <tbody>${itemRows(mb.needs,'needs') || `<tr class="no-modal"><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
+>>>>>>> origin/main
     </div>
     <button class="btn small ghost add-row" data-add-item="needs">+ Add need</button>
   </div>
 
   <div class="section-title">Wants <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalWants)}</span></div>
+<<<<<<< HEAD
+  <div class="card">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+      <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
+=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
       <tbody>${itemRows(mb.wants,'wants') || `<tr class="no-modal"><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
+>>>>>>> origin/main
     </div>
     <button class="btn small ghost add-row" data-add-item="wants">+ Add want</button>
   </div>
 
   <div class="section-title">Investments <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalInv)}</span></div>
+<<<<<<< HEAD
+  <div class="card">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+      <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
+=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
       <tbody>${itemRows(mb.investments,'investments') || `<tr class="no-modal"><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
+>>>>>>> origin/main
     </div>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
