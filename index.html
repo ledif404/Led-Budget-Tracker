@@ -149,9 +149,8 @@ a{color:var(--green-700);}
 .stat-card.warn .num{color:var(--red);}
 .stat-card.good .num{color:var(--green-700);}
 
-/* Swipeable Tables Container */
-.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;} /* forces scroll on small screens */
+/* Default Table Styles */
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
@@ -163,6 +162,7 @@ td input:disabled, td select:disabled {color:var(--ink-soft); opacity:0.8; curso
 .row-del:hover{color:var(--red);background:#fbe6df;}
 .add-row{margin-top:10px;}
 .checkbox{width:17px;height:17px;accent-color:var(--green-700);}
+td.empty-note { font-style: italic; text-align: center; border:none; padding:10px; }
 
 .progress-bar{height:9px;background:var(--paper-2);border-radius:6px;overflow:hidden;margin-top:8px;}
 .progress-bar > div{height:100%;background:linear-gradient(90deg,var(--green-600),var(--gold));border-radius:6px;transition:width .4s ease;}
@@ -198,7 +198,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-select-wrap { display: flex; gap: 8px; margin-bottom: 16px; align-items:center; }
 .cal-select { padding: 6px 10px; border-radius: 6px; border: 1.5px solid var(--line); font-weight: 600; font-family: inherit; font-size: 14px; background:#fff;}
 .calendar-grid {
-  display: grid; grid-template-columns: repeat(7, 1fr); min-width: 600px;
+  display: grid; grid-template-columns: repeat(7, 1fr);
   border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   background: var(--line); gap: 1px;
 }
@@ -219,8 +219,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-tx.inc { background: #e3f0e6; color: var(--green-700); }
 .cal-tx.exp { background: #fbe6df; color: var(--red); }
 .cal-tx.trs { background: #f5f0e3; color: var(--gold); }
-
-.empty-note{color:var(--ink-soft);font-size:12.5px;padding:10px 2px;}
+.mobile-date { display: none; }
 
 /* ---------- Mobile Responsive Overrides ---------- */
 .mobile-header { display:none; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--green-950); color:var(--gold); }
@@ -244,9 +243,39 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .topbar h2 { font-size: 22px; }
   
   .grid.cols-2, .grid.cols-3, .grid.cols-4, .payout-cols { grid-template-columns:1fr; }
-  
   .card { padding:16px; }
   .stat-card .num { font-size:24px; }
+
+  /* Mobile Responsive Tables (Stacked Cards) */
+  table { min-width: 0; display: block; }
+  thead { display: none; }
+  tbody { display: block; width: 100%; }
+  tr { display: block; width: 100%; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  td { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--line); text-align: right; }
+  td:last-child { border-bottom: none; justify-content: flex-end; }
+  
+  td::before { content: attr(data-label); font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--ink-soft); margin-right: 12px; text-align: left; flex-shrink: 0; }
+  td.empty-note::before { content: none; }
+  td.empty-note { justify-content: center; border: none; background: transparent; box-shadow: none; padding: 10px; }
+  
+  /* Align inputs perfectly inside flex td */
+  td input[type="text"], td input[type="number"], td input[type="date"], td select { 
+    width: 100%; max-width: 200px; text-align: right; text-align-last: right; 
+  }
+  td select { direction: rtl; }
+  td select option { direction: ltr; }
+  td input[type="checkbox"] { margin: 0; width: 20px; height: 20px; }
+  .row-del { margin-left: auto; }
+
+  /* Mobile Calendar Morph */
+  .calendar-grid { display: block; background: transparent; border: none; min-width: 0; }
+  .cal-head { display: none; }
+  .cal-cell.empty { display: none; }
+  .cal-cell { display: block; min-height: 0; padding: 14px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; background: #fff; }
+  .cal-date { font-size: 14px; margin-bottom: 10px; }
+  .desktop-date { display: none; }
+  .mobile-date { display: inline; color: var(--green-700); font-weight: 700; background: #e3f0e6; padding: 3px 8px; border-radius: 6px; }
+  .cal-tx { font-size: 12px; padding: 6px 8px; margin-bottom: 4px; border-radius: 6px; }
 }
 </style>
 </head>
@@ -859,8 +888,8 @@ function renderAccounts(){
     const disabledAttr = isManaged ? 'disabled title="Managed automatically from a tracker"' : '';
     return `
     <tr>
-      <td><input type="date" data-tx2-date="${t.id}" value="${t.date||''}" ${disabledAttr}></td>
-      <td>
+      <td data-label="Date"><input type="date" data-tx2-date="${t.id}" value="${t.date||''}" ${disabledAttr}></td>
+      <td data-label="Type">
         <select data-tx2-type="${t.id}" ${disabledAttr}>
           <option value="income" ${t.type==='income'?'selected':''}>Income</option>
           <option value="salary1" ${t.type==='salary1'?'selected':''}>Salary - 1st Payout</option>
@@ -872,15 +901,15 @@ function renderAccounts(){
           <option value="investment" ${t.type==='investment'?'selected':''}>Investment</option>
         </select>
       </td>
-      <td><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
-      <td>
+      <td data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
+      <td data-label="Account">
         <select data-tx2-account="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
       </td>
-      <td>
+      <td data-label="To (Transfer)">
         ${t.type==='transfer' ? `<select data-tx2-to="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
       </td>
-      <td><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
-      <td style="text-align:right;">
+      <td data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
+      <td data-label="Remove" style="text-align:right;">
         ${isManaged ? '<span class="hint" title="Delete from the Budget or Bills tab">🔒</span>' : `<button class="row-del" data-tx2-del="${t.id}">✕</button>`}
       </td>
     </tr>`}).join('');
@@ -899,12 +928,10 @@ function renderAccounts(){
 
   <div class="section-title">Money flow — every peso in, out, or moved</div>
   <div class="card">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
-      </table>
-    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+    </table>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
     <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI). Note: Entries with a 🔒 are managed by your Monthly Budget or Bills Tracker.</div>
   </div>
@@ -931,6 +958,10 @@ function renderCalendar() {
      const dateStr = `${y}-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
      const dayTxs = monthTxs.filter(t => t.date === dateStr);
      
+     // Used for the mobile label view
+     const dateObj = new Date(y, mIdx, d);
+     const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+     
      let txHtml = dayTxs.map(t => {
        let isIncome = ['income', 'salary1', 'salary2'].includes(t.type);
        let isExpense = ['expense', 'need', 'want'].includes(t.type);
@@ -941,7 +972,9 @@ function renderCalendar() {
        </div>`;
      }).join('');
 
-     cells.push(`<div class="cal-cell"><div class="cal-date">${d}</div>${txHtml}</div>`);
+     // On mobile, hide the cell completely if there are no transactions
+     let cellClass = dayTxs.length > 0 ? "cal-cell has-tx" : "cal-cell no-tx";
+     cells.push(`<div class="${cellClass}"><div class="cal-date"><span class="desktop-date">${d}</span><span class="mobile-date">${dayName}, ${calendarMonth} ${d}</span></div>${txHtml}</div>`);
   }
   
   const padding = (7 - (cells.length % 7)) % 7;
@@ -957,12 +990,10 @@ function renderCalendar() {
       <select id="calMonthSel" class="cal-select">${monthOpts}</select>
       <select id="calYearSel" class="cal-select">${yearOpts}</select>
     </div>
-    <div class="table-responsive">
-      <div class="calendar-grid">
-        <div class="cal-head">Sun</div><div class="cal-head">Mon</div><div class="cal-head">Tue</div>
-        <div class="cal-head">Wed</div><div class="cal-head">Thu</div><div class="cal-head">Fri</div><div class="cal-head">Sat</div>
-        ${cells.join('')}
-      </div>
+    <div class="calendar-grid">
+      <div class="cal-head">Sun</div><div class="cal-head">Mon</div><div class="cal-head">Tue</div>
+      <div class="cal-head">Wed</div><div class="cal-head">Thu</div><div class="cal-head">Fri</div><div class="cal-head">Sat</div>
+      ${cells.join('')}
     </div>
   `;
 }
@@ -1064,10 +1095,10 @@ function renderSavings(){
     const isFuture = (selectedYearNum > currentYearNum) || (selectedYearNum === currentYearNum && idx > currentMonthIdx);
     
     return `<tr style="${isFuture ? 'opacity:0.4; pointer-events:none; filter:grayscale(1);' : ''}">
-      <td>${m}</td>
-      <td><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
-      <td style="text-align:center;"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
-      <td class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
+      <td data-label="Month">${m}</td>
+      <td data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
+      <td data-label="Saved?"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
+      <td data-label="Amount Saved" class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
     </tr>`;
   }).join('');
 
@@ -1104,12 +1135,10 @@ function renderSavings(){
 
   <div class="section-title">Monthly savings plan</div>
   <div class="card">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
+    <table>
+      <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
     <div class="hint" style="margin-top:12px;">Checking a month splits that amount across the two payouts in that month's Monthly Budget tab automatically. Future months are locked until they arrive.</div>
   </div>
   `;
@@ -1137,25 +1166,25 @@ function renderBills(){
 
   const rows = list.map((b,idx)=>`
     <tr>
-      <td>${idx+1}</td>
-      <td><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
-      <td><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
-      <td><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
-      <td>
+      <td data-label="#">${idx+1}</td>
+      <td data-label="Due Date"><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
+      <td data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
+      <td data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
+      <td data-label="Paid Via">
         <select data-bill-account="${b.id}">
           <option value="">—</option>
           ${accounts.map(a=>`<option value="${a.id}" ${b.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
         </select>
       </td>
-      <td style="text-align:center;"><input type="checkbox" class="checkbox" data-bill-paid="${b.id}" ${b.paid?'checked':''}></td>
-      <td style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
+      <td data-label="Paid?"><input type="checkbox" class="checkbox" data-bill-paid="${b.id}" ${b.paid?'checked':''}></td>
+      <td data-label="Remove" style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
     </tr>`).join('');
 
   const subRows = (DATA.subscriptions||[]).map((s,idx)=>`
     <tr>
-      <td><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
-      <td><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
-      <td style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
+      <td data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
+      <td data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
+      <td data-label="Remove" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
     </tr>`).join('');
   const subTotal = (DATA.subscriptions||[]).reduce((s,i)=>s+Number(i.amount||0),0);
 
@@ -1165,12 +1194,10 @@ function renderBills(){
   <div class="grid cols-2">
     <div class="card">
       <h3>Bills &amp; Subscriptions — ${MONTH_NAMES[activeMonth]}</h3>
-      <div class="table-responsive">
-        <table>
-          <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
-        </table>
-      </div>
+      <table>
+        <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
+      </table>
       <button class="btn small ghost add-row" id="addBillBtn">+ Add bill</button>
     </div>
     <div class="card">
@@ -1188,12 +1215,10 @@ function renderBills(){
 
   <div class="section-title">Recurring credit card bills</div>
   <div class="card">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Subscription</th><th>Monthly amount</th><th></th></tr></thead>
-        <tbody>${subRows || `<tr><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
-      </table>
-    </div>
+    <table>
+      <thead><tr><th>Subscription</th><th>Monthly amount</th><th></th></tr></thead>
+      <tbody>${subRows || `<tr><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
+    </table>
     <button class="btn small ghost add-row" id="addSubBtn">+ Add subscription</button>
     <div class="hint" style="margin-top:10px;">Total recurring: <b class="mono">${peso(subTotal)}</b> / month</div>
   </div>
@@ -1215,16 +1240,16 @@ function renderCredit(){
 
   const rows = txs.map(t=>`
     <tr>
-      <td><input type="date" data-tx-date="${t.id}" value="${t.date||''}"></td>
-      <td><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries"></td>
-      <td>
+      <td data-label="Date"><input type="date" data-tx-date="${t.id}" value="${t.date||''}"></td>
+      <td data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries"></td>
+      <td data-label="Type">
         <select data-tx-type="${t.id}">
           <option value="charge" ${t.type==='charge'?'selected':''}>Charge</option>
           <option value="payment" ${t.type==='payment'?'selected':''}>Payment</option>
         </select>
       </td>
-      <td><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
-      <td style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
+      <td data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
+      <td data-label="Remove" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
     </tr>`).join('');
 
   return `
@@ -1250,12 +1275,10 @@ function renderCredit(){
 
   <div class="section-title">Transactions</div>
   <div class="card">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
-      </table>
-    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
+    </table>
     <button class="btn small ghost add-row" id="addTxBtn">+ Add transaction</button>
     <div class="hint" style="margin-top:10px;">Charge increases what you've used. Payment reduces it — pay your statement in full to reset available credit.</div>
   </div>
@@ -1294,22 +1317,22 @@ function renderMonth(m){
   function itemRows(list, key){
     return list.map(item=>`
       <tr>
-        <td><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
-        <td><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
-        <td><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
-        <td>
+        <td data-label="Date"><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
+        <td data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
+        <td data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
+        <td data-label="Account">
           <select data-item-account="${key}:${item.id}">
             <option value="">—</option>
             ${accounts.map(a=>`<option value="${a.id}" ${item.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
           </select>
         </td>
-        <td>
+        <td data-label="Payout">
           <select data-item-payout="${key}:${item.id}">
             <option value="1" ${item.payout==1?'selected':''}>1st payout</option>
             <option value="2" ${item.payout==2?'selected':''}>2nd payout</option>
           </select>
         </td>
-        <td style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
+        <td data-label="Remove" style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
       </tr>`).join('');
   }
 
@@ -1408,28 +1431,22 @@ function renderMonth(m){
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
   <div class="card">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-      <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
-    </div>
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="needs">+ Add need</button>
   </div>
 
   <div class="section-title">Wants <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalWants)}</span></div>
   <div class="card">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-      <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
-    </div>
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="wants">+ Add want</button>
   </div>
 
   <div class="section-title">Investments <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalInv)}</span></div>
   <div class="card">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-      <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
-    </div>
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
   `;
@@ -1580,10 +1597,6 @@ function attachHandlers(){
     $("#setSavings")?.addEventListener('input', e=>{ DATA.profile.savingsRatio = Number(e.target.value)/100; queueSave(); });
     $("#setSpending")?.addEventListener('input', e=>{ DATA.profile.spendingRatio = Number(e.target.value)/100; queueSave(); });
     $("#setInvesting")?.addEventListener('input', e=>{ DATA.profile.investingRatio = Number(e.target.value)/100; queueSave(); });
-    $("#switchProjectBtn")?.addEventListener('click', ()=>{
-      localStorage.removeItem('ledger_fb_config');
-      location.reload();
-    });
   }
   if(currentTab==='month'){
     const m = currentMonth;
@@ -1756,7 +1769,6 @@ function setItem(m, key, id, field, val){
 }
 
 /* ---------------- Charts ---------------- */
-
 const chartRegistry = {};
 function drawDonut(canvasId, a, b, isCurrency){
   const el = document.getElementById(canvasId);
