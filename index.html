@@ -2,15 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>The LEDger — Gen Z Budget Passbook</title>
-<link rel="manifest" href="./manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-<link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="The LEDger">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#2d735b">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
@@ -37,7 +30,7 @@
   --radius:14px;
 }
 *{box-sizing:border-box;}
-html,body{margin:0;padding:0;min-height:100%;background:var(--paper);}
+html,body{margin:0;padding:0;}
 body{
   background:
     repeating-linear-gradient(180deg, rgba(11,46,31,0.035) 0px, rgba(11,46,31,0.035) 1px, transparent 1px, transparent 28px),
@@ -45,11 +38,8 @@ body{
   color:var(--ink);
   font-family:'Space Grotesk', sans-serif;
   min-height:100vh;
-  padding-top:env(safe-area-inset-top);
-  padding-bottom:env(safe-area-inset-bottom);
   -webkit-font-smoothing:antialiased;
 }
-#app, .screen{min-height:calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));}
 h1,h2,h3,.display{font-family:'Fraunces', serif;}
 .mono{font-family:'IBM Plex Mono', monospace;}
 button{font-family:inherit;cursor:pointer;}
@@ -159,8 +149,7 @@ a{color:var(--green-700);}
 .stat-card.warn .num{color:var(--red);}
 .stat-card.good .num{color:var(--green-700);}
 
-/* Swipeable Tables Container & Default Desktop Table Styles */
-.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+/* Default Desktop Table Styles */
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;}
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
@@ -233,8 +222,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-tx.inc { background: #e3f0e6; color: var(--green-700); }
 .cal-tx.exp { background: #fbe6df; color: var(--red); }
 .cal-tx.trs { background: #f5f0e3; color: var(--gold); }
-
-.empty-note{color:var(--ink-soft);font-size:12.5px;padding:10px 2px;}
 
 /* ---------- Mobile Responsive Overrides ---------- */
 .mobile-header { display:none; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--green-950); color:var(--gold); }
@@ -528,6 +515,7 @@ const $$ = sel => Array.from(document.querySelectorAll(sel));
 function showScreen(id){
   ["authScreen"].forEach(s=>$("#"+s).classList.add("hidden"));
   $("#app").classList.remove("active");
+  $("#app").style.display = ''; // Reset any inline styles
   if(id) $("#"+id).classList.remove("hidden");
   else $("#app").classList.add("active");
 }
@@ -637,6 +625,17 @@ function friendlyAuthError(e){
 $("#logoutBtn").addEventListener('click', ()=>{
   auth.signOut();
   DATA=null;
+  
+  // Cleanly close the mobile sidebar and any open popups on logout
+  const sidebar = $(".sidebar");
+  const overlay = $("#sidebarOverlay");
+  if(sidebar) sidebar.classList.remove("open");
+  if(overlay) overlay.classList.remove("show");
+  
+  activeModalRowId = null;
+  const tableModalOverlay = document.getElementById('tableModalOverlay');
+  if(tableModalOverlay) tableModalOverlay.classList.remove('show');
+  
   showScreen('authScreen');
 });
 
@@ -646,8 +645,6 @@ function docRef(){ return db.collection('users').doc(currentUser.uid); }
 async function loadUserData(){
   showScreen(null); 
   $("#tabContent").innerHTML = `<div class="empty-note">Opening your passbook…</div>`;
-  document.querySelector('#app').style.display='flex';
-  document.querySelector('#app').classList.add('active');
   try{
     const snap = await docRef().get();
     if(snap.exists){
@@ -1076,6 +1073,9 @@ function renderCalendar() {
      const dateStr = `${y}-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
      const dayTxs = monthTxs.filter(t => t.date === dateStr);
      
+     const dateObj = new Date(y, mIdx, d);
+     const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+     
      let txHtml = dayTxs.map(t => {
        let isIncome = ['income', 'salary1', 'salary2'].includes(t.type);
        let isExpense = ['expense', 'need', 'want'].includes(t.type);
@@ -1086,7 +1086,9 @@ function renderCalendar() {
        </div>`;
      }).join('');
 
-     cells.push(`<div class="cal-cell"><div class="cal-date"><span class="desktop-date">${d}</span></div>${txHtml}</div>`);
+     // On mobile, hide the cell completely if there are no transactions
+     let cellClass = dayTxs.length > 0 ? "cal-cell has-tx" : "cal-cell no-tx";
+     cells.push(`<div class="${cellClass}"><div class="cal-date"><span class="desktop-date">${d}</span><span class="mobile-date">${dayName}, ${calendarMonth} ${d}</span></div>${txHtml}</div>`);
   }
   
   const padding = (7 - (cells.length % 7)) % 7;
@@ -2030,17 +2032,6 @@ function drawCashFlowChart(canvasId){
 
 /* ---------------- Boot ---------------- */
 boot();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      await navigator.serviceWorker.register('./sw.js');
-      console.log('Service worker registered successfully.');
-    } catch (err) {
-      console.warn('Service worker registration failed:', err);
-    }
-  });
-}
 </script>
 </body>
 </html>
