@@ -149,8 +149,7 @@ a{color:var(--green-700);}
 .stat-card.warn .num{color:var(--red);}
 .stat-card.good .num{color:var(--green-700);}
 
-/* Default Table Styles */
-.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+/* Default Desktop Table Styles */
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;}
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
@@ -165,8 +164,7 @@ td input:disabled, td select:disabled {color:var(--ink-soft); opacity:0.8; curso
 .checkbox{width:17px;height:17px;accent-color:var(--green-700);}
 td.empty-note { font-style: italic; text-align: center; border:none; padding:10px; }
 
-/* Collapsible Row Logic (Desktop disables it) */
-.collapsible-tr::after { display: none; }
+.mobile-only { display: none !important; }
 
 .progress-bar{height:9px;background:var(--paper-2);border-radius:6px;overflow:hidden;margin-top:8px;}
 .progress-bar > div{height:100%;background:linear-gradient(90deg,var(--green-600),var(--gold));border-radius:6px;transition:width .4s ease;}
@@ -198,7 +196,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .health-row .name{font-weight:600;font-size:13.5px;}
 .health-row .detail{font-size:12px;color:var(--ink-soft);margin-top:2px;}
 
-/* Calendar styles */
+/* Desktop Calendar styles */
 .cal-select-wrap { display: flex; gap: 8px; margin-bottom: 16px; align-items:center; }
 .cal-select { padding: 6px 10px; border-radius: 6px; border: 1.5px solid var(--line); font-weight: 600; font-family: inherit; font-size: 14px; background:#fff;}
 .calendar-grid {
@@ -223,7 +221,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-tx.inc { background: #e3f0e6; color: var(--green-700); }
 .cal-tx.exp { background: #fbe6df; color: var(--red); }
 .cal-tx.trs { background: #f5f0e3; color: var(--gold); }
-.mobile-date { display: none; }
 
 /* ---------- Mobile Responsive Overrides ---------- */
 .mobile-header { display:none; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--green-950); color:var(--gold); }
@@ -231,6 +228,10 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .mobile-menu-btn { background:none; border:none; color:var(--gold); font-size:24px; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:90; opacity:0; transition: opacity 0.3s ease; }
 .sidebar-overlay.show { display:block; opacity:1; }
+
+/* Mobile Modal Overlay */
+.table-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; }
+.table-modal-overlay.show { display:block; }
 
 @media(max-width:860px){
   #app.active{flex-direction:column;}
@@ -250,61 +251,70 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .card { padding:16px; }
   .stat-card .num { font-size:24px; }
 
-  /* Mobile Responsive Tables (Stacked Accordion Cards) */
-  table { min-width: 0; display: block; }
+  .mobile-only { display: flex !important; }
+  .desktop-only { display: none !important; }
+
+  /* --- Mobile Tables (Bank Feed & Popup Modals) --- */
+  table { min-width: 0; display: block; border-collapse: separate; border-spacing: 0; }
   thead { display: none; }
   tbody { display: block; width: 100%; }
   
-  tr:not(.collapsible-tr) { display: block; width: 100%; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  /* Every row is a distinct card block */
+  tr:not(.no-modal) {
+    display: block; width: 100%; margin-bottom: 12px; background: #fff;
+    border-bottom: 1px solid var(--line); padding: 4px 0; cursor: pointer;
+  }
   
-  tr.collapsible-tr {
-    display: block; width: 100%; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 8px; 
-    padding: 8px 12px 28px 12px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; cursor: pointer;
-  }
-  tr.collapsible-tr::after {
-    display: block; content: "▼ Tap to view/edit details"; position: absolute; bottom: 0; left: 0; right: 0;
-    background: var(--paper-2); color: var(--green-700); text-align: center; font-size: 11px; font-weight: 600;
-    padding: 6px 0; border-radius: 0 0 8px 8px;
-  }
-  tr.collapsible-tr.open::after { content: "▲ Hide details"; }
+  /* Hide all normal edit fields on mobile by default */
+  tr:not(.no-modal) td.edit-field { display: none; }
+  tr:not(.no-modal) td.mobile-summary-td { display: flex; width: 100%; justify-content: space-between; align-items: center; border:none; padding:8px 0; }
 
-  td { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); text-align: right; }
-  td:last-child { border-bottom: none; justify-content: flex-end; }
-  
-  td::before { content: attr(data-label); font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--ink-soft); margin-right: 12px; text-align: left; flex-shrink: 0; }
-  td.empty-note::before { content: none; }
-  td.empty-note { justify-content: center; border: none; background: transparent; box-shadow: none; padding: 10px; }
-  
-  /* Hide specific fields in mobile until row is opened */
-  tr.collapsible-tr td.hide-mobile { display: none !important; }
-  tr.collapsible-tr.open td.hide-mobile { display: flex !important; }
-  
-  /* Align inputs perfectly inside flex td */
-  td input[type="text"], td input[type="number"], td input[type="date"], td select { 
-    width: 100%; max-width: 180px; text-align: right; text-align-last: right; 
+  /* When row is tapped and becomes an open modal */
+  tr.modal-open {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 92%; max-width: 420px; max-height: 85vh; overflow-y: auto;
+    z-index: 1001; background: var(--card); padding: 24px 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); border-radius: 16px; cursor: default;
+    border: none;
   }
-  td select { direction: rtl; }
-  td select option { direction: ltr; }
+  tr.modal-open td.mobile-summary-td { display: none !important; }
+  tr.modal-open td.edit-field {
+    display: flex !important; align-items: center; justify-content: space-between; 
+    border-bottom: 1px dashed var(--line); padding: 12px 0;
+  }
+  tr.modal-open td.edit-field:last-child { border-bottom: none; }
+  
+  tr.modal-open::before {
+    content: "Edit Details"; display: block; font-family: 'Fraunces', serif;
+    font-size: 20px; font-weight: 600; margin-bottom: 16px; text-align: center; color: var(--green-950);
+  }
+  
+  /* Label generation inside the modal */
+  tr.modal-open td.edit-field::before { content: attr(data-label); font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--ink-soft); margin-right: 12px; flex-shrink:0; }
+  
+  /* Inputs inside modal */
+  tr.modal-open td input, tr.modal-open td select { width: 100%; max-width: 180px; text-align: right; text-align-last: right; padding: 6px 8px; }
   td input[type="checkbox"] { margin: 0; width: 20px; height: 20px; }
   .row-del { margin-left: auto; }
 
-  /* Mobile Grid Calendar Restore */
+  /* --- Mobile Grid Calendar Restore --- */
   .calendar-grid { 
     display: grid !important; grid-template-columns: repeat(7, 1fr) !important;
     min-width: 100% !important; border: 1px solid var(--line) !important;
-    background: var(--line) !important; gap: 1px !important;
+    background: var(--line) !important; gap: 1px !important; border-radius:6px;
   }
   .cal-head { display: block !important; font-size: 9px !important; padding: 6px 0 !important; }
   .cal-cell.empty { display: block !important; background: #faf9f5 !important; }
   .cal-cell {
     display: flex !important; flex-direction: column !important; gap: 2px !important;
-    padding: 4px !important; min-height: 50px !important; border-radius: 0 !important; border: none !important; margin-bottom: 0 !important;
+    padding: 3px !important; min-height: 50px !important; border-radius: 0 !important; border: none !important; margin-bottom: 0 !important;
   }
-  .cal-date { font-size: 10px !important; margin-bottom: 2px !important; }
-  .cal-tx { font-size: 9px !important; padding: 2px !important; flex-direction: column !important; align-items: flex-start !important; }
-  .tx-desc { display: none !important; } /* Hide description to maintain grid structure on small screens */
-  .desktop-date { display: inline !important; }
-  .mobile-date { display: none !important; }
+  .cal-date { font-size: 11px !important; margin-bottom: 2px !important; text-align:center; width:100%; }
+  
+  /* Hide the description text on mobile so only the bubble remains */
+  .cal-tx { font-size: 9px !important; padding: 2px !important; flex-direction: column !important; align-items: center !important; justify-content:center!important;}
+  .cal-tx span { margin: 0 !important; text-align:center !important; } 
+  .cal-tx .tx-desc { display: none !important; } 
 }
 </style>
 </head>
@@ -343,6 +353,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
     <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
   </div>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="table-modal-overlay" id="tableModalOverlay"></div>
 
   <aside class="sidebar">
     <div class="sb-brand">
@@ -427,6 +438,8 @@ function pesoShort(n){
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 
+function capitalize(s){ return s && s[0].toUpperCase() + s.slice(1); }
+
 function ensureYearDataExists(data, year) {
   if(!data.monthlyBudget) data.monthlyBudget = {};
   if(!data.savingsPlans) data.savingsPlans = {};
@@ -481,6 +494,9 @@ let currentAppYear = new Date().getFullYear().toString();
 let calendarMonth = currentMonth;
 let calendarYear = currentAppYear;
 
+// Used to track which table row is currently expanded as a modal on mobile
+let activeModalRowId = null;
+
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 
@@ -530,6 +546,18 @@ function toggleMobileMenu() {
 }
 $("#mobileMenuBtn")?.addEventListener('click', toggleMobileMenu);
 $("#sidebarOverlay")?.addEventListener('click', toggleMobileMenu);
+
+/* ---------------- Mobile Table Modal Handlers ---------------- */
+function openRowModal(id) {
+  if (window.innerWidth > 860) return; // Only apply on mobile
+  activeModalRowId = id;
+  render();
+}
+function closeRowModal() {
+  activeModalRowId = null;
+  render();
+}
+$("#tableModalOverlay")?.addEventListener('click', closeRowModal);
 
 /* ---------------- Auth Handlers ---------------- */
 let authMode = 'login';
@@ -758,6 +786,7 @@ const TITLES = {
 
 function goTab(tab, month){
   currentTab = tab;
+  activeModalRowId = null; // reset modal states on tab switch
   if(tab==='month') currentMonth = month;
   setActiveNav(tab, month);
   if(tab==='month'){
@@ -795,6 +824,11 @@ function render(){
       }
     } catch (e) {}
   }
+
+  // Manage mobile overlay
+  const overlay = document.getElementById('tableModalOverlay');
+  if(activeModalRowId) overlay.classList.add('show');
+  else overlay.classList.remove('show');
 
   if(currentTab==='dashboard') el.innerHTML = renderDashboard();
   else if(currentTab==='accounts') el.innerHTML = renderAccounts();
@@ -887,6 +921,14 @@ function totalBalance(){
   return (DATA.accounts||[]).reduce((s,a)=> s+accountBalance(a.id), 0);
 }
 
+function getIconForType(type) {
+  if(['income', 'salary1', 'salary2'].includes(type)) return '💰';
+  if(['expense', 'need', 'want'].includes(type)) return '🛒';
+  if(type === 'transfer') return '⇄';
+  if(type === 'investment') return '📈';
+  return '💸';
+}
+
 function renderAccounts(){
   const accounts = DATA.accounts||[];
   const txs = (DATA.moneyTx||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
@@ -915,10 +957,27 @@ function renderAccounts(){
   const rows = txs.map(t=>{
     const isManaged = (t.linkedBillId || t.linkedBudgetId) ? true : false;
     const disabledAttr = isManaged ? 'disabled title="Managed automatically from a tracker"' : '';
+    const isOpen = activeModalRowId === t.id ? 'modal-open' : '';
+    
+    const isInc = ['income', 'salary1', 'salary2'].includes(t.type);
+    const isExp = ['expense', 'need', 'want'].includes(t.type);
+    
     return `
-    <tr class="collapsible-tr">
-      <td data-label="Date"><input type="date" data-tx2-date="${t.id}" value="${t.date||''}" ${disabledAttr}></td>
-      <td data-label="Type">
+    <tr class="${isOpen}">
+      <td class="mobile-summary-td mobile-only" onclick="openRowModal('${t.id}')">
+          <div style="display:flex; align-items:center; gap:14px; text-align:left;">
+             <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">${getIconForType(t.type)}</div>
+             <div>
+               <div style="font-weight:600; font-size:14.5px;">${escapeHtml(t.desc) || capitalize(t.type)}</div>
+               <div style="font-size:11.5px;color:var(--ink-soft); margin-top:2px;">${t.date || '--'} • ${capitalize(t.type)}</div>
+             </div>
+          </div>
+          <div style="font-weight:700; font-size:15px; color:${isInc?'var(--green-700)':(isExp?'var(--ink)':'var(--gold)')}; text-align:right;">
+             ${isInc?'+':(isExp?'-':'')}${pesoShort(t.amount)}
+          </div>
+      </td>
+      <td class="edit-field" data-label="Date"><input type="date" data-tx2-date="${t.id}" value="${t.date||''}" ${disabledAttr}></td>
+      <td class="edit-field" data-label="Type">
         <select data-tx2-type="${t.id}" ${disabledAttr}>
           <option value="income" ${t.type==='income'?'selected':''}>Income</option>
           <option value="salary1" ${t.type==='salary1'?'selected':''}>Salary - 1st Payout</option>
@@ -930,16 +989,19 @@ function renderAccounts(){
           <option value="investment" ${t.type==='investment'?'selected':''}>Investment</option>
         </select>
       </td>
-      <td data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
-      <td data-label="Account" class="hide-mobile">
+      <td class="edit-field" data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
+      <td class="edit-field" data-label="Account">
         <select data-tx2-account="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
       </td>
-      <td data-label="To (Transfer)" class="hide-mobile">
+      <td class="edit-field" data-label="To (Transfer)">
         ${t.type==='transfer' ? `<select data-tx2-to="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
       </td>
-      <td data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
-      <td data-label="Remove" class="hide-mobile" style="text-align:right;">
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
+      <td class="edit-field" data-label="Remove" style="text-align:right;">
         ${isManaged ? '<span class="hint" title="Delete from the Budget or Bills tab">🔒</span>' : `<button class="row-del" data-tx2-del="${t.id}">✕</button>`}
+      </td>
+      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px;">
+          <button class="btn block" onclick="closeRowModal()">Done</button>
       </td>
     </tr>`}).join('');
 
@@ -956,13 +1018,11 @@ function renderAccounts(){
   <button class="btn small ghost add-row" id="addAccountBtn" style="margin-top:12px;">+ Add account or bank</button>
 
   <div class="section-title">Money flow — every peso in, out, or moved</div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Account</th><th class="hide-mobile">To (transfer)</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
-      </table>
-    </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
+      <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+    </table>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
     <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI). Note: Entries with a 🔒 are managed by your Monthly Budget or Bills Tracker.</div>
   </div>
@@ -988,9 +1048,6 @@ function renderCalendar() {
   for(let d=1; d<=daysInMonth; d++) {
      const dateStr = `${y}-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
      const dayTxs = monthTxs.filter(t => t.date === dateStr);
-     
-     const dateObj = new Date(y, mIdx, d);
-     const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
      
      let txHtml = dayTxs.map(t => {
        let isIncome = ['income', 'salary1', 'salary2'].includes(t.type);
@@ -1120,15 +1177,24 @@ function renderSavings(){
 
   const rows = MONTHS.map((m, idx)=>{
     const plan = DATA.savingsPlans[currentAppYear][m];
-    
-    // Future Check for locking editing
     const isFuture = (selectedYearNum > currentYearNum) || (selectedYearNum === currentYearNum && idx > currentMonthIdx);
+    const isOpen = activeModalRowId === `sav-${m}` ? 'modal-open' : '';
     
-    return `<tr style="${isFuture ? 'opacity:0.4; pointer-events:none; filter:grayscale(1);' : ''}">
-      <td data-label="Month">${m}</td>
-      <td data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
-      <td data-label="Saved?"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
-      <td data-label="Amount Saved" class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
+    return `<tr class="${isOpen}" style="${isFuture ? 'opacity:0.4; pointer-events:none; filter:grayscale(1);' : ''}">
+      <td class="mobile-summary-td mobile-only" onclick="${!isFuture ? `openRowModal('sav-${m}')` : ''}">
+           <div style="text-align:left;">
+              <div style="font-weight:600;font-size:14.5px;">${m}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">Status: ${plan.saved?'Saved':'Pending'}</div>
+           </div>
+           <div style="font-weight:700;font-size:14.5px;color:${plan.saved?'var(--green-700)':'var(--ink)'};">${pesoShort(plan.planned)}</div>
+      </td>
+      <td class="edit-field" data-label="Month">${m}</td>
+      <td class="edit-field" data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
+      <td class="edit-field" data-label="Saved?"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
+      <td class="edit-field" data-label="Amount Saved" class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
+      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+          <button class="btn block" onclick="closeRowModal()">Done</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -1164,13 +1230,11 @@ function renderSavings(){
   </div>
 
   <div class="section-title">Monthly savings plan</div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
     <div class="hint" style="margin-top:12px;">Checking a month splits that amount across the two payouts in that month's Monthly Budget tab automatically. Future months are locked until they arrive.</div>
   </div>
   `;
@@ -1196,42 +1260,70 @@ function renderBills(){
   const pct = list.length ? Math.round(paid/list.length*100) : 0;
   const accounts = DATA.accounts||[];
 
-  const rows = list.map((b,idx)=>`
-    <tr class="collapsible-tr">
-      <td data-label="#" class="hide-mobile">${idx+1}</td>
-      <td data-label="Due Date"><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
-      <td data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
-      <td data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
-      <td data-label="Paid Via" class="hide-mobile">
+  const rows = list.map((b,idx)=>{
+    const isOpen = activeModalRowId === b.id ? 'modal-open' : '';
+    return `
+    <tr class="${isOpen}">
+      <td class="mobile-summary-td mobile-only" onclick="openRowModal('${b.id}')">
+           <div style="display:flex; align-items:center; gap:12px; text-align:left;">
+             <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">📄</div>
+             <div>
+               <div style="font-weight:600; font-size:14.5px;">${escapeHtml(b.name) || 'Unnamed Bill'}</div>
+               <div style="font-size:11.5px;color:var(--ink-soft); margin-top:2px;">Due: ${b.date || '--'} • ${b.paid?'Paid':'Unpaid'}</div>
+             </div>
+          </div>
+          <div style="font-weight:700; font-size:15px; color:${b.paid?'var(--green-700)':'var(--red)'}; text-align:right;">
+             ${pesoShort(b.amount)}
+          </div>
+      </td>
+      <td class="edit-field" data-label="#">${idx+1}</td>
+      <td class="edit-field" data-label="Due Date"><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
+      <td class="edit-field" data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
+      <td class="edit-field" data-label="Paid Via">
         <select data-bill-account="${b.id}">
           <option value="">—</option>
           ${accounts.map(a=>`<option value="${a.id}" ${b.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
         </select>
       </td>
-      <td data-label="Paid?"><input type="checkbox" class="checkbox" data-bill-paid="${b.id}" ${b.paid?'checked':''}></td>
-      <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
-    </tr>`).join('');
+      <td class="edit-field" data-label="Paid?"><input type="checkbox" class="checkbox" data-bill-paid="${b.id}" ${b.paid?'checked':''}></td>
+      <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
+      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+          <button class="btn block" onclick="closeRowModal()">Done</button>
+      </td>
+    </tr>`}).join('');
 
-  const subRows = (DATA.subscriptions||[]).map((s,idx)=>`
-    <tr class="collapsible-tr">
-      <td data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
-      <td data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
-      <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
-    </tr>`).join('');
+  const subRows = (DATA.subscriptions||[]).map((s,idx)=>{
+    const isOpen = activeModalRowId === s.id ? 'modal-open' : '';
+    return `
+    <tr class="${isOpen}">
+      <td class="mobile-summary-td mobile-only" onclick="openRowModal('${s.id}')">
+           <div style="text-align:left;">
+              <div style="font-weight:600;font-size:14.5px;">${escapeHtml(s.name) || 'Subscription'}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">Recurring Monthly</div>
+           </div>
+           <div style="font-weight:700;font-size:15px;color:var(--ink);">${pesoShort(s.amount)}</div>
+      </td>
+      <td class="edit-field" data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
+      <td class="edit-field" data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
+      <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
+      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+          <button class="btn block" onclick="closeRowModal()">Done</button>
+      </td>
+    </tr>`}).join('');
+    
   const subTotal = (DATA.subscriptions||[]).reduce((s,i)=>s+Number(i.amount||0),0);
 
   return `
   <div class="month-picker-tabs">${tabs}</div>
 
   <div class="grid cols-2">
-    <div class="card" style="padding:12px 16px;">
+    <div class="card">
       <h3>Bills &amp; Subscriptions — ${MONTH_NAMES[activeMonth]}</h3>
-      <div class="table-responsive">
-        <table>
-          <thead><tr><th class="hide-mobile">#</th><th>Due date</th><th>Bill</th><th>Amount</th><th class="hide-mobile">Paid via</th><th style="text-align:center;">Paid</th><th class="hide-mobile"></th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
-        </table>
-      </div>
+      <table>
+        <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
+        <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
+      </table>
       <button class="btn small ghost add-row" id="addBillBtn">+ Add bill</button>
     </div>
     <div class="card">
@@ -1248,13 +1340,11 @@ function renderBills(){
   </div>
 
   <div class="section-title">Recurring credit card bills</div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Subscription</th><th>Monthly amount</th><th class="hide-mobile"></th></tr></thead>
-        <tbody>${subRows || `<tr><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
-      </table>
-    </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Subscription</th><th>Monthly amount</th><th></th></tr></thead>
+      <tbody>${subRows || `<tr class="no-modal"><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
+    </table>
     <button class="btn small ghost add-row" id="addSubBtn">+ Add subscription</button>
     <div class="hint" style="margin-top:10px;">Total recurring: <b class="mono">${peso(subTotal)}</b> / month</div>
   </div>
@@ -1274,19 +1364,36 @@ function renderCredit(){
   const pct = limit>0 ? Math.min(100, Math.round(used/limit*100)) : 0;
   const txs = (DATA.creditCard.transactions||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
 
-  const rows = txs.map(t=>`
-    <tr class="collapsible-tr">
-      <td data-label="Date"><input type="date" data-tx-date="${t.id}" value="${t.date||''}"></td>
-      <td data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries"></td>
-      <td data-label="Type">
+  const rows = txs.map(t=>{
+    const isOpen = activeModalRowId === t.id ? 'modal-open' : '';
+    return `
+    <tr class="${isOpen}">
+      <td class="mobile-summary-td mobile-only" onclick="openRowModal('${t.id}')">
+           <div style="display:flex; align-items:center; gap:14px; text-align:left;">
+             <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">💳</div>
+             <div>
+               <div style="font-weight:600; font-size:14.5px;">${escapeHtml(t.desc) || 'Transaction'}</div>
+               <div style="font-size:11.5px;color:var(--ink-soft); margin-top:2px;">${t.date || '--'} • ${capitalize(t.type)}</div>
+             </div>
+          </div>
+          <div style="font-weight:700; font-size:15px; color:${t.type==='payment'?'var(--green-700)':'var(--red)'}; text-align:right;">
+             ${t.type==='payment'?'+':'-'}${pesoShort(t.amount)}
+          </div>
+      </td>
+      <td class="edit-field" data-label="Date"><input type="date" data-tx-date="${t.id}" value="${t.date||''}"></td>
+      <td class="edit-field" data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries"></td>
+      <td class="edit-field" data-label="Type">
         <select data-tx-type="${t.id}">
           <option value="charge" ${t.type==='charge'?'selected':''}>Charge</option>
           <option value="payment" ${t.type==='payment'?'selected':''}>Payment</option>
         </select>
       </td>
-      <td data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
-      <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
-    </tr>`).join('');
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
+      <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
+      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+          <button class="btn block" onclick="closeRowModal()">Done</button>
+      </td>
+    </tr>`}).join('');
 
   return `
   <div class="grid cols-3">
@@ -1310,13 +1417,11 @@ function renderCredit(){
   </div>
 
   <div class="section-title">Transactions</div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
-      </table>
-    </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
+      <tbody>${rows || `<tr class="no-modal"><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
+    </table>
     <button class="btn small ghost add-row" id="addTxBtn">+ Add transaction</button>
     <div class="hint" style="margin-top:10px;">Charge increases what you've used. Payment reduces it — pay your statement in full to reset available credit.</div>
   </div>
@@ -1353,25 +1458,42 @@ function renderMonth(m){
   const accounts = DATA.accounts||[];
 
   function itemRows(list, key){
-    return list.map(item=>`
-      <tr class="collapsible-tr">
-        <td data-label="Date"><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
-        <td data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
-        <td data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
-        <td data-label="Account" class="hide-mobile">
+    return list.map(item=>{
+      const isOpen = activeModalRowId === `${key}:${item.id}` ? 'modal-open' : '';
+      return `
+      <tr class="${isOpen}">
+        <td class="mobile-summary-td mobile-only" onclick="openRowModal('${key}:${item.id}')">
+           <div style="display:flex; align-items:center; gap:14px; text-align:left;">
+             <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">🛒</div>
+             <div>
+               <div style="font-weight:600; font-size:14.5px;">${escapeHtml(item.name) || 'Item Name'}</div>
+               <div style="font-size:11.5px;color:var(--ink-soft); margin-top:2px;">${item.date || '--'} • Payout ${item.payout}</div>
+             </div>
+          </div>
+          <div style="font-weight:700; font-size:15px; color:var(--red); text-align:right;">
+             -${pesoShort(item.amount)}
+          </div>
+        </td>
+        <td class="edit-field" data-label="Date"><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
+        <td class="edit-field" data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
+        <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
+        <td class="edit-field" data-label="Account">
           <select data-item-account="${key}:${item.id}">
             <option value="">—</option>
             ${accounts.map(a=>`<option value="${a.id}" ${item.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
           </select>
         </td>
-        <td data-label="Payout" class="hide-mobile">
+        <td class="edit-field" data-label="Payout">
           <select data-item-payout="${key}:${item.id}">
             <option value="1" ${item.payout==1?'selected':''}>1st payout</option>
             <option value="2" ${item.payout==2?'selected':''}>2nd payout</option>
           </select>
         </td>
-        <td data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
-      </tr>`).join('');
+        <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
+        <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+          <button class="btn block" onclick="closeRowModal()">Done</button>
+        </td>
+      </tr>`}).join('');
   }
 
   function totalFor(list){ return list.reduce((s,i)=>s+Number(i.amount||0),0); }
@@ -1468,29 +1590,23 @@ function renderMonth(m){
   </div>
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
-      <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
-    </div>
+  <div class="card">
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.needs,'needs') || `<tr class="no-modal"><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="needs">+ Add need</button>
   </div>
 
   <div class="section-title">Wants <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalWants)}</span></div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
-      <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
-    </div>
+  <div class="card">
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.wants,'wants') || `<tr class="no-modal"><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="wants">+ Add want</button>
   </div>
 
   <div class="section-title">Investments <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalInv)}</span></div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
-      <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
-    </div>
+  <div class="card">
+    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
+    <tbody>${itemRows(mb.investments,'investments') || `<tr class="no-modal"><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
   `;
@@ -1526,7 +1642,7 @@ function attachHandlers(){
       DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBillId !== id);
       DATA.bills[currentAppYear][renderBills._month] = DATA.bills[currentAppYear][renderBills._month].filter(b=>b.id!==id);
       queueSave(); render();
-    }));
+    });
     $("#addSubBtn")?.addEventListener('click', ()=>{
       DATA.subscriptions.push({id:uid(), name:'', amount:0});
       queueSave(); render();
@@ -1586,7 +1702,7 @@ function attachHandlers(){
     $$("[data-tx-del]").forEach(i=>i.addEventListener('click', e=>{
       DATA.creditCard.transactions = DATA.creditCard.transactions.filter(t=>t.id!==e.target.dataset.txDel);
       queueSave(); render();
-    }));
+    });
   }
   if(currentTab==='accounts'){
     $("#addAccountBtn")?.addEventListener('click', ()=>{
@@ -1641,10 +1757,6 @@ function attachHandlers(){
     $("#setSavings")?.addEventListener('input', e=>{ DATA.profile.savingsRatio = Number(e.target.value)/100; queueSave(); });
     $("#setSpending")?.addEventListener('input', e=>{ DATA.profile.spendingRatio = Number(e.target.value)/100; queueSave(); });
     $("#setInvesting")?.addEventListener('input', e=>{ DATA.profile.investingRatio = Number(e.target.value)/100; queueSave(); });
-    $("#switchProjectBtn")?.addEventListener('click', ()=>{
-      localStorage.removeItem('ledger_fb_config');
-      location.reload();
-    });
   }
   if(currentTab==='month'){
     const m = currentMonth;
@@ -1716,18 +1828,6 @@ function attachHandlers(){
     }
   }catch(e){ console.warn('chart draw skipped', e); }
 }
-
-// Universal tap listener for Mobile Collapsible Rows (Accordion)
-document.addEventListener('click', e => {
-  if (window.innerWidth > 860) return; // Only apply on mobile
-  const tr = e.target.closest('.collapsible-tr');
-  if(tr) {
-    // Ignore clicks if they tapped on an input, button, or select dropdown
-    const tag = e.target.tagName;
-    if(tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON' || e.target.closest('.checkbox') || e.target.closest('.row-del')) return;
-    tr.classList.toggle('open');
-  }
-});
 
 function setBill(id, field, val){
   let found = false;
