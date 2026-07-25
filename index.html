@@ -159,14 +159,9 @@ a{color:var(--green-700);}
 .stat-card.warn .num{color:var(--red);}
 .stat-card.good .num{color:var(--green-700);}
 
-<<<<<<< HEAD
-/* Swipeable Tables Container */
-.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;} /* forces scroll on small screens */
-=======
 /* Default Desktop Table Styles */
+.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;}
->>>>>>> origin/main
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
@@ -217,7 +212,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-select-wrap { display: flex; gap: 8px; margin-bottom: 16px; align-items:center; }
 .cal-select { padding: 6px 10px; border-radius: 6px; border: 1.5px solid var(--line); font-weight: 600; font-family: inherit; font-size: 14px; background:#fff;}
 .calendar-grid {
-  display: grid; grid-template-columns: repeat(7, 1fr); min-width: 600px;
+  display: grid; grid-template-columns: repeat(7, 1fr);
   border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   background: var(--line); gap: 1px; min-width:600px;
 }
@@ -239,24 +234,16 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-tx.exp { background: #fbe6df; color: var(--red); }
 .cal-tx.trs { background: #f5f0e3; color: var(--gold); }
 
-<<<<<<< HEAD
-.empty-note{color:var(--ink-soft);font-size:12.5px;padding:10px 2px;}
-
-=======
->>>>>>> origin/main
 /* ---------- Mobile Responsive Overrides ---------- */
 .mobile-header { display:none; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--green-950); color:var(--gold); }
 .mobile-header h1 { margin:0; font-size:18px; font-weight:600; font-family:'Fraunces', serif; color:var(--paper); }
 .mobile-menu-btn { background:none; border:none; color:var(--gold); font-size:24px; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:90; opacity:0; transition: opacity 0.3s ease; }
 .sidebar-overlay.show { display:block; opacity:1; }
-<<<<<<< HEAD
-=======
 
 /* Mobile Modal Overlay */
 .table-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; }
 .table-modal-overlay.show { display:block; }
->>>>>>> origin/main
 
 @media(max-width:860px){
   #app.active{flex-direction:column;}
@@ -273,11 +260,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .topbar h2 { font-size: 22px; }
   
   .grid.cols-2, .grid.cols-3, .grid.cols-4, .payout-cols { grid-template-columns:1fr; }
-<<<<<<< HEAD
-  
-  .card { padding:16px; }
-  .stat-card .num { font-size:24px; }
-=======
   .card { padding:16px; }
   .stat-card .num { font-size:24px; }
 
@@ -356,7 +338,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   .cal-tx .tx-desc { display: none !important; } 
   .desktop-date { display: inline !important; }
   .mobile-date { display: none !important; }
->>>>>>> origin/main
 }
 </style>
 </head>
@@ -395,10 +376,7 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
     <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
   </div>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
-<<<<<<< HEAD
-=======
   <div class="table-modal-overlay" id="tableModalOverlay"></div>
->>>>>>> origin/main
 
   <aside class="sidebar">
     <div class="sb-brand">
@@ -572,8 +550,18 @@ function boot(){
   }
   showScreen('authScreen');
   auth.onAuthStateChanged(user=>{
-    if(user){ currentUser = user; loadUserData(); }
-    else { currentUser = null; showScreen('authScreen'); }
+    if(user){ 
+      currentUser = user; 
+      const pwField = $("#authPassword");
+      if(pwField) pwField.setAttribute('type', 'hidden'); // Prevents aggressive mobile password prompts
+      loadUserData(); 
+    }
+    else { 
+      currentUser = null; 
+      const pwField = $("#authPassword");
+      if(pwField) pwField.setAttribute('type', 'password');
+      showScreen('authScreen'); 
+    }
   });
 }
 
@@ -592,8 +580,6 @@ function toggleMobileMenu() {
 $("#mobileMenuBtn")?.addEventListener('click', toggleMobileMenu);
 $("#sidebarOverlay")?.addEventListener('click', toggleMobileMenu);
 
-<<<<<<< HEAD
-=======
 /* ---------------- Mobile Table Modal Handlers ---------------- */
 function openRowModal(id) {
   if (window.innerWidth > 860) return; // Only apply on mobile
@@ -606,7 +592,6 @@ function closeRowModal() {
 }
 $("#tableModalOverlay")?.addEventListener('click', closeRowModal);
 
->>>>>>> origin/main
 /* ---------------- Auth Handlers ---------------- */
 let authMode = 'login';
 $("#authToggleBtn").addEventListener('click', ()=>{
@@ -986,7 +971,7 @@ function renderAccounts(){
     const bal = accountBalance(a.id);
     return `<div class="card stat-card ${bal<0?'warn':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
-        <input type="text" data-acc-name="${a.id}" value="${escapeHtml(a.name)}" style="border:none;background:transparent;font-weight:700;font-size:14px;padding:0;width:auto;flex:1;">
+        <input type="text" data-acc-name="${a.id}" value="${escapeHtml(a.name)}" style="border:none;background:transparent;font-weight:700;font-size:14px;padding:0;width:auto;flex:1;" autocomplete="off">
         <button class="row-del" data-acc-del="${a.id}" title="Remove account">✕</button>
       </div>
       <div class="num" style="margin-top:6px;">${peso(bal)}</div>
@@ -998,7 +983,7 @@ function renderAccounts(){
           <option value="other" ${a.type==='other'?'selected':''}>Other</option>
         </select>
       </div>
-      <div class="hint">Starting balance: <input type="number" step="any" class="mono" data-acc-start="${a.id}" value="${val(a.startingBalance)}" placeholder="0" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
+      <div class="hint">Starting balance: <input type="number" step="any" class="mono" data-acc-start="${a.id}" value="${val(a.startingBalance)}" placeholder="0" autocomplete="off" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
     </div>`;
   }).join('');
 
@@ -1037,14 +1022,14 @@ function renderAccounts(){
           <option value="investment" ${t.type==='investment'?'selected':''}>Investment</option>
         </select>
       </td>
-      <td class="edit-field" data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
+      <td class="edit-field" data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" autocomplete="off" ${disabledAttr}></td>
       <td class="edit-field" data-label="Account">
         <select data-tx2-account="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
       </td>
       <td class="edit-field" data-label="To (Transfer)">
         ${t.type==='transfer' ? `<select data-tx2-to="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
       </td>
-      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" autocomplete="off" ${disabledAttr}></td>
       <td class="edit-field" data-label="Remove" style="text-align:right;">
         ${isManaged ? '<span class="hint" title="Delete from the Budget or Bills tab">🔒</span>' : `<button class="row-del" data-tx2-del="${t.id}">✕</button>`}
       </td>
@@ -1066,19 +1051,11 @@ function renderAccounts(){
   <button class="btn small ghost add-row" id="addAccountBtn" style="margin-top:12px;">+ Add account or bank</button>
 
   <div class="section-title">Money flow — every peso in, out, or moved</div>
-<<<<<<< HEAD
-  <div class="card">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
-=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table>
         <thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Account</th><th class="hide-mobile">To (transfer)</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
         <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
->>>>>>> origin/main
       </table>
     </div>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
@@ -1247,7 +1224,7 @@ function renderSavings(){
            <div style="font-weight:700;font-size:14.5px;color:${plan.saved?'var(--green-700)':'var(--ink)'};">${pesoShort(plan.planned)}</div>
       </td>
       <td class="edit-field" data-label="Month">${m}</td>
-      <td class="edit-field" data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
+      <td class="edit-field" data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" autocomplete="off" ${isFuture ? 'disabled' : ''}></td>
       <td class="edit-field" data-label="Saved?"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
       <td class="edit-field" data-label="Amount Saved" class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
       <td class="modal-close-cell">
@@ -1260,16 +1237,16 @@ function renderSavings(){
   <div class="grid cols-3">
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Average net income / month</label>
-      <input type="number" step="any" id="incomeInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(p.monthlyIncome)}" placeholder="0">
+      <input type="number" step="any" id="incomeInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(p.monthlyIncome)}" placeholder="0" autocomplete="off">
     </div>
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Savings ratio (60/20/20 rule)</label><br>
-      <input type="number" step="any" id="savingsRatioInput" style="width:70px;font-size:16px;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;" value="${p.savingsRatio}"> <span style="color:var(--ink-soft);">→ ${Math.round(p.savingsRatio*100)}%</span>
+      <input type="number" step="any" id="savingsRatioInput" style="width:70px;font-size:16px;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;" value="${p.savingsRatio}" autocomplete="off"> <span style="color:var(--ink-soft);">→ ${Math.round(p.savingsRatio*100)}%</span>
       <div class="hint">Ideal monthly saving: <b>${peso(ideal)}</b></div>
     </div>
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Goal name</label>
-      <input type="text" id="goalNameInput" style="width:100%;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;font-size:15px;" value="${escapeHtml(p.goalName)}">
+      <input type="text" id="goalNameInput" style="width:100%;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;font-size:15px;" value="${escapeHtml(p.goalName)}" autocomplete="off">
     </div>
   </div>
 
@@ -1282,17 +1259,13 @@ function renderSavings(){
       </div>
       <div>
         <label style="font-size:11px;color:var(--ink-soft);">Goal amount</label><br>
-        <input type="number" step="any" id="goalAmountInput" class="mono" style="width:140px;border:1.5px solid var(--line);border-radius:8px;padding:8px;" value="${val(p.goalAmount)}" placeholder="0">
+        <input type="number" step="any" id="goalAmountInput" class="mono" style="width:140px;border:1.5px solid var(--line);border-radius:8px;padding:8px;" value="${val(p.goalAmount)}" placeholder="0" autocomplete="off">
       </div>
     </div>
   </div>
 
   <div class="section-title">Monthly savings plan</div>
-<<<<<<< HEAD
-  <div class="card">
-=======
   <div class="card" style="padding:12px 16px;">
->>>>>>> origin/main
     <div class="table-responsive">
       <table>
         <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
@@ -1342,8 +1315,8 @@ function renderBills(){
       </td>
       <td class="edit-field" data-label="#" class="hide-mobile">${idx+1}</td>
       <td class="edit-field" data-label="Due Date"><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
-      <td class="edit-field" data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
-      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
+      <td class="edit-field" data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity" autocomplete="off"></td>
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0" autocomplete="off"></td>
       <td class="edit-field" data-label="Paid Via" class="hide-mobile">
         <select data-bill-account="${b.id}">
           <option value="">—</option>
@@ -1368,8 +1341,8 @@ function renderBills(){
            </div>
            <div style="font-weight:700;font-size:15px;color:var(--ink);">${pesoShort(s.amount)}</div>
       </td>
-      <td class="edit-field" data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
-      <td class="edit-field" data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
+      <td class="edit-field" data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix" autocomplete="off"></td>
+      <td class="edit-field" data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0" autocomplete="off"></td>
       <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
       <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
@@ -1386,13 +1359,8 @@ function renderBills(){
       <h3>Bills &amp; Subscriptions — ${MONTH_NAMES[activeMonth]}</h3>
       <div class="table-responsive">
         <table>
-<<<<<<< HEAD
-          <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
-=======
           <thead><tr><th class="hide-mobile">#</th><th>Due date</th><th>Bill</th><th>Amount</th><th class="hide-mobile">Paid via</th><th style="text-align:center;">Paid</th><th class="hide-mobile"></th></tr></thead>
           <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
->>>>>>> origin/main
         </table>
       </div>
       <button class="btn small ghost add-row" id="addBillBtn">+ Add bill</button>
@@ -1411,19 +1379,11 @@ function renderBills(){
   </div>
 
   <div class="section-title">Recurring credit card bills</div>
-<<<<<<< HEAD
-  <div class="card">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Subscription</th><th>Monthly amount</th><th></th></tr></thead>
-        <tbody>${subRows || `<tr><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
-=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table>
         <thead><tr><th>Subscription</th><th>Monthly amount</th><th class="hide-mobile"></th></tr></thead>
         <tbody>${subRows || `<tr class="no-modal"><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
->>>>>>> origin/main
       </table>
     </div>
     <button class="btn small ghost add-row" id="addSubBtn">+ Add subscription</button>
@@ -1432,7 +1392,7 @@ function renderBills(){
 
   <div class="section-title">Notes</div>
   <div class="card">
-    <textarea class="notes" id="notesInput" placeholder="Reminders, financial tips, anything you want to remember...">${escapeHtml(DATA.notes||'')}</textarea>
+    <textarea class="notes" id="notesInput" placeholder="Reminders, financial tips, anything you want to remember..." autocomplete="off">${escapeHtml(DATA.notes||'')}</textarea>
   </div>
   `;
 }
@@ -1462,14 +1422,14 @@ function renderCredit(){
           </div>
       </td>
       <td class="edit-field" data-label="Date"><input type="date" data-tx-date="${t.id}" value="${t.date||''}"></td>
-      <td class="edit-field" data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries"></td>
+      <td class="edit-field" data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries" autocomplete="off"></td>
       <td class="edit-field" data-label="Type">
         <select data-tx-type="${t.id}">
           <option value="charge" ${t.type==='charge'?'selected':''}>Charge</option>
           <option value="payment" ${t.type==='payment'?'selected':''}>Payment</option>
         </select>
       </td>
-      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0" autocomplete="off"></td>
       <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
       <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
@@ -1480,7 +1440,7 @@ function renderCredit(){
   <div class="grid cols-3">
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Credit limit</label>
-      <input type="number" step="any" id="ccLimitInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(limit)}" placeholder="0">
+      <input type="number" step="any" id="ccLimitInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(limit)}" placeholder="0" autocomplete="off">
     </div>
     <div class="card stat-card ${pct>80?'warn':'good'}"><div class="label">Available credit</div><div class="num">${pesoShort(available)}</div></div>
     <div class="card stat-card ${pct>80?'warn':''}"><div class="label">Used (${pct}%)</div><div class="num">${pesoShort(used)}</div></div>
@@ -1498,19 +1458,11 @@ function renderCredit(){
   </div>
 
   <div class="section-title">Transactions</div>
-<<<<<<< HEAD
-  <div class="card">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
-=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table>
         <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
         <tbody>${rows || `<tr class="no-modal"><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
->>>>>>> origin/main
       </table>
     </div>
     <button class="btn small ghost add-row" id="addTxBtn">+ Add transaction</button>
@@ -1526,9 +1478,9 @@ function renderSettings(){
   <div class="grid cols-2">
     <div class="card">
       <h3>Budgeting ratios</h3>
-      <div class="field"><label>Savings %</label><input type="number" step="any" id="setSavings" value="${Math.round(p.savingsRatio*100)}"></div>
-      <div class="field"><label>Spending (needs + wants) %</label><input type="number" step="any" id="setSpending" value="${Math.round(p.spendingRatio*100)}"></div>
-      <div class="field"><label>Investing %</label><input type="number" step="any" id="setInvesting" value="${Math.round(p.investingRatio*100)}"></div>
+      <div class="field"><label>Savings %</label><input type="number" step="any" id="setSavings" value="${Math.round(p.savingsRatio*100)}" autocomplete="off"></div>
+      <div class="field"><label>Spending (needs + wants) %</label><input type="number" step="any" id="setSpending" value="${Math.round(p.spendingRatio*100)}" autocomplete="off"></div>
+      <div class="field"><label>Investing %</label><input type="number" step="any" id="setInvesting" value="${Math.round(p.investingRatio*100)}" autocomplete="off"></div>
       <div class="hint">These power the Money Health Checker on your dashboard. Default follows the 60/20/20 rule.</div>
     </div>
     <div class="card">
@@ -1566,8 +1518,8 @@ function renderMonth(m){
           </div>
         </td>
         <td class="edit-field" data-label="Date"><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
-        <td class="edit-field" data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
-        <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
+        <td class="edit-field" data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name" autocomplete="off"></td>
+        <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0" autocomplete="off"></td>
         <td class="edit-field" data-label="Account" class="hide-mobile">
           <select data-item-account="${key}:${item.id}">
             <option value="">—</option>
@@ -1681,49 +1633,28 @@ function renderMonth(m){
   </div>
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
-<<<<<<< HEAD
-  <div class="card">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-      <tbody>${itemRows(mb.needs,'needs') || `<tr><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
-=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
       <tbody>${itemRows(mb.needs,'needs') || `<tr class="no-modal"><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
->>>>>>> origin/main
     </div>
     <button class="btn small ghost add-row" data-add-item="needs">+ Add need</button>
   </div>
 
   <div class="section-title">Wants <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalWants)}</span></div>
-<<<<<<< HEAD
-  <div class="card">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-      <tbody>${itemRows(mb.wants,'wants') || `<tr><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
-=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
       <tbody>${itemRows(mb.wants,'wants') || `<tr class="no-modal"><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
->>>>>>> origin/main
     </div>
     <button class="btn small ghost add-row" data-add-item="wants">+ Add want</button>
   </div>
 
   <div class="section-title">Investments <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalInv)}</span></div>
-<<<<<<< HEAD
-  <div class="card">
-    <div class="table-responsive">
-      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-      <tbody>${itemRows(mb.investments,'investments') || `<tr><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
-=======
   <div class="card" style="padding:12px 16px;">
     <div class="table-responsive">
       <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
       <tbody>${itemRows(mb.investments,'investments') || `<tr class="no-modal"><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
->>>>>>> origin/main
     </div>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
