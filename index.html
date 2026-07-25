@@ -150,6 +150,7 @@ a{color:var(--green-700);}
 .stat-card.good .num{color:var(--green-700);}
 
 /* Default Desktop Table Styles */
+.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;}
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
@@ -513,14 +514,17 @@ const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 
 function showScreen(id){
+  const authEl = document.getElementById("authScreen");
+  const appEl = document.getElementById("app");
+  
   if(id === 'authScreen') {
-    $("#authScreen").classList.remove("hidden");
-    $("#app").classList.remove("active");
-    $("#app").style.display = "none"; 
+    authEl.classList.remove("hidden");
+    appEl.classList.remove("active");
+    appEl.style.display = "none"; // Explicit hard-hide
   } else {
-    $("#authScreen").classList.add("hidden");
-    $("#app").classList.add("active");
-    $("#app").style.display = "flex"; 
+    authEl.classList.add("hidden");
+    appEl.classList.add("active");
+    appEl.style.display = "flex"; // Restore layout
   }
 }
 
@@ -627,23 +631,12 @@ function friendlyAuthError(e){
 }
 
 $("#logoutBtn").addEventListener('click', ()=>{
-  auth.signOut();
-  DATA=null;
-  
-  // Force UI reset so sidebars and overlays don't stick around on the login screen
-  const sidebar = $(".sidebar");
-  const overlay = $("#sidebarOverlay");
-  if(sidebar) sidebar.classList.remove("open");
-  if(overlay) overlay.classList.remove("show");
-  
-  activeModalRowId = null;
-  const tableModalOverlay = document.getElementById('tableModalOverlay');
-  if(tableModalOverlay) tableModalOverlay.classList.remove('show');
-  
-  // Wipe the dashboard HTML so no user data remains temporarily
-  $("#tabContent").innerHTML = "";
-  
-  showScreen('authScreen');
+  auth.signOut().then(() => {
+    // Nuclear option: Force reload the entire browser tab to completely destroy the DOM, 
+    // clear all memory arrays, and rebuild the auth screen from a blank slate.
+    // This perfectly prevents PWAs and mobile browsers from caching open sidebars or overlays.
+    window.location.reload(); 
+  });
 });
 
 /* ---------------- Data load / save ---------------- */
@@ -1878,18 +1871,6 @@ function attachHandlers(){
     }
   }catch(e){ console.warn('chart draw skipped', e); }
 }
-
-// Universal tap listener for Mobile Collapsible Rows (Accordion)
-document.addEventListener('click', e => {
-  if (window.innerWidth > 860) return; // Only apply on mobile
-  const tr = e.target.closest('.collapsible-tr');
-  if(tr) {
-    // Ignore clicks if they tapped on an input, button, or select dropdown
-    const tag = e.target.tagName;
-    if(tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON' || e.target.closest('.checkbox') || e.target.closest('.row-del')) return;
-    tr.classList.toggle('open');
-  }
-});
 
 function setBill(id, field, val){
   let found = false;
