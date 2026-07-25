@@ -159,7 +159,7 @@ a{color:var(--green-700);}
 .stat-card.warn .num{color:var(--red);}
 .stat-card.good .num{color:var(--green-700);}
 
-/* Default Desktop Table Styles */
+/* Swipeable Tables Container & Default Desktop Table Styles */
 .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px;}
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:8px 8px;border-bottom:2px solid var(--line);font-weight:700;}
@@ -233,6 +233,8 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 .cal-tx.inc { background: #e3f0e6; color: var(--green-700); }
 .cal-tx.exp { background: #fbe6df; color: var(--red); }
 .cal-tx.trs { background: #f5f0e3; color: var(--gold); }
+
+.empty-note{color:var(--ink-soft);font-size:12.5px;padding:10px 2px;}
 
 /* ---------- Mobile Responsive Overrides ---------- */
 .mobile-header { display:none; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--green-950); color:var(--gold); }
@@ -550,18 +552,8 @@ function boot(){
   }
   showScreen('authScreen');
   auth.onAuthStateChanged(user=>{
-    if(user){ 
-      currentUser = user; 
-      const pwField = $("#authPassword");
-      if(pwField) pwField.setAttribute('type', 'hidden'); // Prevents aggressive mobile password prompts
-      loadUserData(); 
-    }
-    else { 
-      currentUser = null; 
-      const pwField = $("#authPassword");
-      if(pwField) pwField.setAttribute('type', 'password');
-      showScreen('authScreen'); 
-    }
+    if(user){ currentUser = user; loadUserData(); }
+    else { currentUser = null; showScreen('authScreen'); }
   });
 }
 
@@ -971,7 +963,7 @@ function renderAccounts(){
     const bal = accountBalance(a.id);
     return `<div class="card stat-card ${bal<0?'warn':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
-        <input type="text" data-acc-name="${a.id}" value="${escapeHtml(a.name)}" style="border:none;background:transparent;font-weight:700;font-size:14px;padding:0;width:auto;flex:1;" autocomplete="off">
+        <input type="text" data-acc-name="${a.id}" value="${escapeHtml(a.name)}" style="border:none;background:transparent;font-weight:700;font-size:14px;padding:0;width:auto;flex:1;">
         <button class="row-del" data-acc-del="${a.id}" title="Remove account">✕</button>
       </div>
       <div class="num" style="margin-top:6px;">${peso(bal)}</div>
@@ -983,7 +975,7 @@ function renderAccounts(){
           <option value="other" ${a.type==='other'?'selected':''}>Other</option>
         </select>
       </div>
-      <div class="hint">Starting balance: <input type="number" step="any" class="mono" data-acc-start="${a.id}" value="${val(a.startingBalance)}" placeholder="0" autocomplete="off" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
+      <div class="hint">Starting balance: <input type="number" step="any" class="mono" data-acc-start="${a.id}" value="${val(a.startingBalance)}" placeholder="0" style="width:100px;border:none;border-bottom:1px solid var(--line);background:transparent;"></div>
     </div>`;
   }).join('');
 
@@ -1022,14 +1014,14 @@ function renderAccounts(){
           <option value="investment" ${t.type==='investment'?'selected':''}>Investment</option>
         </select>
       </td>
-      <td class="edit-field" data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" autocomplete="off" ${disabledAttr}></td>
+      <td class="edit-field" data-label="Description"><input type="text" data-tx2-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Salary, Groceries" ${disabledAttr}></td>
       <td class="edit-field" data-label="Account">
         <select data-tx2-account="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
       </td>
       <td class="edit-field" data-label="To (Transfer)">
         ${t.type==='transfer' ? `<select data-tx2-to="${t.id}" ${disabledAttr}><option value="">—</option>${accounts.map(a=>`<option value="${a.id}" ${t.toAccountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>` : `<span class="hint">—</span>`}
       </td>
-      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" autocomplete="off" ${disabledAttr}></td>
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx2-amount="${t.id}" value="${val(t.amount)}" placeholder="0" ${disabledAttr}></td>
       <td class="edit-field" data-label="Remove" style="text-align:right;">
         ${isManaged ? '<span class="hint" title="Delete from the Budget or Bills tab">🔒</span>' : `<button class="row-del" data-tx2-del="${t.id}">✕</button>`}
       </td>
@@ -1224,7 +1216,7 @@ function renderSavings(){
            <div style="font-weight:700;font-size:14.5px;color:${plan.saved?'var(--green-700)':'var(--ink)'};">${pesoShort(plan.planned)}</div>
       </td>
       <td class="edit-field" data-label="Month">${m}</td>
-      <td class="edit-field" data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" autocomplete="off" ${isFuture ? 'disabled' : ''}></td>
+      <td class="edit-field" data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
       <td class="edit-field" data-label="Saved?"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
       <td class="edit-field" data-label="Amount Saved" class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
       <td class="modal-close-cell">
@@ -1237,16 +1229,16 @@ function renderSavings(){
   <div class="grid cols-3">
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Average net income / month</label>
-      <input type="number" step="any" id="incomeInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(p.monthlyIncome)}" placeholder="0" autocomplete="off">
+      <input type="number" step="any" id="incomeInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(p.monthlyIncome)}" placeholder="0">
     </div>
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Savings ratio (60/20/20 rule)</label><br>
-      <input type="number" step="any" id="savingsRatioInput" style="width:70px;font-size:16px;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;" value="${p.savingsRatio}" autocomplete="off"> <span style="color:var(--ink-soft);">→ ${Math.round(p.savingsRatio*100)}%</span>
+      <input type="number" step="any" id="savingsRatioInput" style="width:70px;font-size:16px;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;" value="${p.savingsRatio}"> <span style="color:var(--ink-soft);">→ ${Math.round(p.savingsRatio*100)}%</span>
       <div class="hint">Ideal monthly saving: <b>${peso(ideal)}</b></div>
     </div>
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Goal name</label>
-      <input type="text" id="goalNameInput" style="width:100%;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;font-size:15px;" value="${escapeHtml(p.goalName)}" autocomplete="off">
+      <input type="text" id="goalNameInput" style="width:100%;border:none;border-bottom:2px solid var(--line);padding:8px 0;margin-top:6px;font-size:15px;" value="${escapeHtml(p.goalName)}">
     </div>
   </div>
 
@@ -1259,7 +1251,7 @@ function renderSavings(){
       </div>
       <div>
         <label style="font-size:11px;color:var(--ink-soft);">Goal amount</label><br>
-        <input type="number" step="any" id="goalAmountInput" class="mono" style="width:140px;border:1.5px solid var(--line);border-radius:8px;padding:8px;" value="${val(p.goalAmount)}" placeholder="0" autocomplete="off">
+        <input type="number" step="any" id="goalAmountInput" class="mono" style="width:140px;border:1.5px solid var(--line);border-radius:8px;padding:8px;" value="${val(p.goalAmount)}" placeholder="0">
       </div>
     </div>
   </div>
@@ -1315,8 +1307,8 @@ function renderBills(){
       </td>
       <td class="edit-field" data-label="#" class="hide-mobile">${idx+1}</td>
       <td class="edit-field" data-label="Due Date"><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
-      <td class="edit-field" data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity" autocomplete="off"></td>
-      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0" autocomplete="off"></td>
+      <td class="edit-field" data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
       <td class="edit-field" data-label="Paid Via" class="hide-mobile">
         <select data-bill-account="${b.id}">
           <option value="">—</option>
@@ -1341,8 +1333,8 @@ function renderBills(){
            </div>
            <div style="font-weight:700;font-size:15px;color:var(--ink);">${pesoShort(s.amount)}</div>
       </td>
-      <td class="edit-field" data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix" autocomplete="off"></td>
-      <td class="edit-field" data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0" autocomplete="off"></td>
+      <td class="edit-field" data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
+      <td class="edit-field" data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
       <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
       <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
@@ -1392,7 +1384,7 @@ function renderBills(){
 
   <div class="section-title">Notes</div>
   <div class="card">
-    <textarea class="notes" id="notesInput" placeholder="Reminders, financial tips, anything you want to remember..." autocomplete="off">${escapeHtml(DATA.notes||'')}</textarea>
+    <textarea class="notes" id="notesInput" placeholder="Reminders, financial tips, anything you want to remember...">${escapeHtml(DATA.notes||'')}</textarea>
   </div>
   `;
 }
@@ -1422,14 +1414,14 @@ function renderCredit(){
           </div>
       </td>
       <td class="edit-field" data-label="Date"><input type="date" data-tx-date="${t.id}" value="${t.date||''}"></td>
-      <td class="edit-field" data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries" autocomplete="off"></td>
+      <td class="edit-field" data-label="Description"><input type="text" data-tx-desc="${t.id}" value="${escapeHtml(t.desc||'')}" placeholder="e.g. Groceries"></td>
       <td class="edit-field" data-label="Type">
         <select data-tx-type="${t.id}">
           <option value="charge" ${t.type==='charge'?'selected':''}>Charge</option>
           <option value="payment" ${t.type==='payment'?'selected':''}>Payment</option>
         </select>
       </td>
-      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0" autocomplete="off"></td>
+      <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
       <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
       <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
@@ -1440,7 +1432,7 @@ function renderCredit(){
   <div class="grid cols-3">
     <div class="card">
       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;">Credit limit</label>
-      <input type="number" step="any" id="ccLimitInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(limit)}" placeholder="0" autocomplete="off">
+      <input type="number" step="any" id="ccLimitInput" class="mono" style="font-size:18px;border:none;border-bottom:2px solid var(--line);width:100%;padding:8px 0;margin-top:6px;" value="${val(limit)}" placeholder="0">
     </div>
     <div class="card stat-card ${pct>80?'warn':'good'}"><div class="label">Available credit</div><div class="num">${pesoShort(available)}</div></div>
     <div class="card stat-card ${pct>80?'warn':''}"><div class="label">Used (${pct}%)</div><div class="num">${pesoShort(used)}</div></div>
@@ -1478,9 +1470,9 @@ function renderSettings(){
   <div class="grid cols-2">
     <div class="card">
       <h3>Budgeting ratios</h3>
-      <div class="field"><label>Savings %</label><input type="number" step="any" id="setSavings" value="${Math.round(p.savingsRatio*100)}" autocomplete="off"></div>
-      <div class="field"><label>Spending (needs + wants) %</label><input type="number" step="any" id="setSpending" value="${Math.round(p.spendingRatio*100)}" autocomplete="off"></div>
-      <div class="field"><label>Investing %</label><input type="number" step="any" id="setInvesting" value="${Math.round(p.investingRatio*100)}" autocomplete="off"></div>
+      <div class="field"><label>Savings %</label><input type="number" step="any" id="setSavings" value="${Math.round(p.savingsRatio*100)}"></div>
+      <div class="field"><label>Spending (needs + wants) %</label><input type="number" step="any" id="setSpending" value="${Math.round(p.spendingRatio*100)}"></div>
+      <div class="field"><label>Investing %</label><input type="number" step="any" id="setInvesting" value="${Math.round(p.investingRatio*100)}"></div>
       <div class="hint">These power the Money Health Checker on your dashboard. Default follows the 60/20/20 rule.</div>
     </div>
     <div class="card">
@@ -1518,8 +1510,8 @@ function renderMonth(m){
           </div>
         </td>
         <td class="edit-field" data-label="Date"><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
-        <td class="edit-field" data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name" autocomplete="off"></td>
-        <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0" autocomplete="off"></td>
+        <td class="edit-field" data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
+        <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
         <td class="edit-field" data-label="Account" class="hide-mobile">
           <select data-item-account="${key}:${item.id}">
             <option value="">—</option>
