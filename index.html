@@ -165,6 +165,7 @@ td input:disabled, td select:disabled {color:var(--ink-soft); opacity:0.8; curso
 td.empty-note { font-style: italic; text-align: center; border:none; padding:10px; }
 
 .mobile-only { display: none !important; }
+.modal-close-cell { display: none !important; }
 
 .progress-bar{height:9px;background:var(--paper-2);border-radius:6px;overflow:hidden;margin-top:8px;}
 .progress-bar > div{height:100%;background:linear-gradient(90deg,var(--green-600),var(--gold));border-radius:6px;transition:width .4s ease;}
@@ -259,13 +260,18 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   thead { display: none; }
   tbody { display: block; width: 100%; }
   
+  /* Every row is a distinct card block */
   tr:not(.no-modal) {
     display: block; width: 100%; margin-bottom: 12px; background: #fff;
     border-bottom: 1px solid var(--line); padding: 4px 0; cursor: pointer;
   }
   
-  td.edit-field { display: none; }
-  td.mobile-summary-td { display: flex; width: 100%; justify-content: space-between; align-items: center; border:none; padding:8px 0; }
+  /* Hide all normal edit fields on mobile by default */
+  tr:not(.no-modal) td.edit-field { display: none; }
+  tr:not(.no-modal) td.mobile-summary-td { display: flex; width: 100%; justify-content: space-between; align-items: center; border:none; padding:8px 0; }
+  
+  /* Hide the modal close button in regular view */
+  tr:not(.modal-open) td.modal-close-cell { display: none !important; }
 
   /* When row is tapped and becomes an open modal */
   tr.modal-open {
@@ -287,8 +293,16 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
     font-size: 20px; font-weight: 600; margin-bottom: 16px; text-align: center; color: var(--green-950);
   }
   
+  /* Make the close button appear inside the modal */
+  tr.modal-open td.modal-close-cell { 
+    display: flex !important; align-items: center; justify-content: center; 
+    border-bottom: none; padding-top: 16px; width: 100%; 
+  }
+  
+  /* Label generation inside the modal */
   tr.modal-open td.edit-field::before { content: attr(data-label); font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--ink-soft); margin-right: 12px; flex-shrink:0; }
   
+  /* Inputs inside modal */
   tr.modal-open td input, tr.modal-open td select { width: 100%; max-width: 180px; text-align: right; text-align-last: right; padding: 6px 8px; }
   td input[type="checkbox"] { margin: 0; width: 20px; height: 20px; }
   .row-del { margin-left: auto; }
@@ -307,9 +321,12 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   }
   .cal-date { font-size: 11px !important; margin-bottom: 2px !important; text-align:center; width:100%; }
   
+  /* Hide the description text on mobile so only the bubble remains */
   .cal-tx { font-size: 9px !important; padding: 2px !important; flex-direction: column !important; align-items: center !important; justify-content:center!important;}
   .cal-tx span { margin: 0 !important; text-align:center !important; } 
   .cal-tx .tx-desc { display: none !important; } 
+  .desktop-date { display: inline !important; }
+  .mobile-date { display: none !important; }
 }
 </style>
 </head>
@@ -436,32 +453,20 @@ function uid(){ return Math.random().toString(36).slice(2,10); }
 function capitalize(s){ return s && s[0].toUpperCase() + s.slice(1); }
 
 function ensureYearDataExists(data, year) {
-  if(!data) return;
   if(!data.monthlyBudget) data.monthlyBudget = {};
   if(!data.savingsPlans) data.savingsPlans = {};
   if(!data.bills) data.bills = {};
   
-  if(!data.monthlyBudget[year]) data.monthlyBudget[year] = {};
-  if(!data.savingsPlans[year]) data.savingsPlans[year] = {};
-  if(!data.bills[year]) data.bills[year] = {};
-
-  MONTHS.forEach(m => {
-    if(!data.monthlyBudget[year][m]) {
+  if(!data.monthlyBudget[year]) {
+    data.monthlyBudget[year] = {};
+    data.savingsPlans[year] = {};
+    data.bills[year] = {};
+    MONTHS.forEach(m => {
       data.monthlyBudget[year][m] = {needs:[], wants:[], investments:[]};
-    } else {
-      data.monthlyBudget[year][m].needs = data.monthlyBudget[year][m].needs || [];
-      data.monthlyBudget[year][m].wants = data.monthlyBudget[year][m].wants || [];
-      data.monthlyBudget[year][m].investments = data.monthlyBudget[year][m].investments || [];
-    }
-
-    if(!data.savingsPlans[year][m]) {
       data.savingsPlans[year][m] = {planned:0, saved:false};
-    }
-
-    if(!data.bills[year][m]) {
       data.bills[year][m] = [];
-    }
-  });
+    });
+  }
 }
 
 function defaultData(){
@@ -501,6 +506,7 @@ let currentAppYear = new Date().getFullYear().toString();
 let calendarMonth = currentMonth;
 let calendarYear = currentAppYear;
 
+// Used to track which table row is currently expanded as a modal on mobile
 let activeModalRowId = null;
 
 const $ = sel => document.querySelector(sel);
@@ -555,7 +561,7 @@ $("#sidebarOverlay")?.addEventListener('click', toggleMobileMenu);
 
 /* ---------------- Mobile Table Modal Handlers ---------------- */
 function openRowModal(id) {
-  if (window.innerWidth > 860) return;
+  if (window.innerWidth > 860) return; // Only apply on mobile
   activeModalRowId = id;
   render();
 }
@@ -678,10 +684,7 @@ function mergeDefaults(data){
   out.savingsPlans = out.savingsPlans || {};
   out.bills = out.bills || {};
   
-  ['2026', '2027', '2028', '2029', '2030'].forEach(y => {
-    ensureYearDataExists(out, y);
-  });
-  
+  ensureYearDataExists(out, currentAppYear);
   return out;
 }
 
@@ -795,7 +798,7 @@ const TITLES = {
 
 function goTab(tab, month){
   currentTab = tab;
-  activeModalRowId = null; 
+  activeModalRowId = null; // reset modal states on tab switch
   if(tab==='month') currentMonth = month;
   setActiveNav(tab, month);
   if(tab==='month'){
@@ -806,6 +809,7 @@ function goTab(tab, month){
     $("#pageSub").textContent = TITLES[tab][1];
   }
   
+  // Auto-close mobile menu if open
   if($(".sidebar").classList.contains("open")) {
     toggleMobileMenu();
   }
@@ -833,9 +837,10 @@ function render(){
     } catch (e) {}
   }
 
+  // Manage mobile overlay
   const overlay = document.getElementById('tableModalOverlay');
-  if(activeModalRowId) overlay?.classList.add('show');
-  else overlay?.classList.remove('show');
+  if(activeModalRowId) overlay.classList.add('show');
+  else overlay.classList.remove('show');
 
   if(currentTab==='dashboard') el.innerHTML = renderDashboard();
   else if(currentTab==='accounts') el.innerHTML = renderAccounts();
@@ -970,7 +975,7 @@ function renderAccounts(){
     const isExp = ['expense', 'need', 'want'].includes(t.type);
     
     return `
-    <tr class="${isOpen}">
+    <tr class="collapsible-tr ${isOpen}">
       <td class="mobile-summary-td mobile-only" onclick="openRowModal('${t.id}')">
           <div style="display:flex; align-items:center; gap:14px; text-align:left;">
              <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">${getIconForType(t.type)}</div>
@@ -1007,7 +1012,7 @@ function renderAccounts(){
       <td class="edit-field" data-label="Remove" style="text-align:right;">
         ${isManaged ? '<span class="hint" title="Delete from the Budget or Bills tab">🔒</span>' : `<button class="row-del" data-tx2-del="${t.id}">✕</button>`}
       </td>
-      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px;">
+      <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
       </td>
     </tr>`}).join('');
@@ -1025,11 +1030,13 @@ function renderAccounts(){
   <button class="btn small ghost add-row" id="addAccountBtn" style="margin-top:12px;">+ Add account or bank</button>
 
   <div class="section-title">Money flow — every peso in, out, or moved</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
-      <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Account</th><th class="hide-mobile">To (transfer)</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
+        <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+      </table>
+    </div>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
     <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI). Note: Entries with a 🔒 are managed by your Monthly Budget or Bills Tracker.</div>
   </div>
@@ -1183,11 +1190,11 @@ function renderSavings(){
   const selectedYearNum = parseInt(currentAppYear);
 
   const rows = MONTHS.map((m, idx)=>{
-    const plan = DATA.savingsPlans[currentAppYear][m] || {planned:0, saved:false};
+    const plan = DATA.savingsPlans[currentAppYear][m];
     const isFuture = (selectedYearNum > currentYearNum) || (selectedYearNum === currentYearNum && idx > currentMonthIdx);
     const isOpen = activeModalRowId === `sav-${m}` ? 'modal-open' : '';
     
-    return `<tr class="${isOpen}" style="${isFuture ? 'opacity:0.4; pointer-events:none; filter:grayscale(1);' : ''}">
+    return `<tr class="collapsible-tr ${isOpen}" style="${isFuture ? 'opacity:0.4; pointer-events:none; filter:grayscale(1);' : ''}">
       <td class="mobile-summary-td mobile-only" onclick="${!isFuture ? `openRowModal('sav-${m}')` : ''}">
            <div style="text-align:left;">
               <div style="font-weight:600;font-size:14.5px;">${m}</div>
@@ -1199,7 +1206,7 @@ function renderSavings(){
       <td class="edit-field" data-label="Planned Amount"><input type="number" step="any" class="mono" data-savings-planned="${m}" value="${val(plan.planned)}" placeholder="0" ${isFuture ? 'disabled' : ''}></td>
       <td class="edit-field" data-label="Saved?"><input type="checkbox" class="checkbox" data-savings-saved="${m}" ${plan.saved?'checked':''} ${isFuture ? 'disabled' : ''}></td>
       <td class="edit-field" data-label="Amount Saved" class="mono">${plan.saved ? peso(plan.planned||0) : '—'}</td>
-      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+      <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
       </td>
     </tr>`;
@@ -1237,11 +1244,13 @@ function renderSavings(){
   </div>
 
   <div class="section-title">Monthly savings plan</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Month</th><th>Planned amount</th><th style="text-align:center;">Saved?</th><th>Amount saved</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
     <div class="hint" style="margin-top:12px;">Checking a month splits that amount across the two payouts in that month's Monthly Budget tab automatically. Future months are locked until they arrive.</div>
   </div>
   `;
@@ -1262,7 +1271,7 @@ function renderBills(){
   renderBills._month = activeMonth;
 
   const tabs = availableMonths.map(m=>`<button data-bill-month-tab="${m}" class="${m===activeMonth?'active':''}">${m} ${currentAppYear}</button>`).join('');
-  const list = (DATA.bills[currentAppYear] && DATA.bills[currentAppYear][activeMonth]) ? DATA.bills[currentAppYear][activeMonth] : [];
+  const list = DATA.bills[currentAppYear][activeMonth] || [];
   const paid = list.filter(b=>b.paid).length;
   const pct = list.length ? Math.round(paid/list.length*100) : 0;
   const accounts = DATA.accounts||[];
@@ -1270,7 +1279,7 @@ function renderBills(){
   const rows = list.map((b,idx)=>{
     const isOpen = activeModalRowId === b.id ? 'modal-open' : '';
     return `
-    <tr class="${isOpen}">
+    <tr class="collapsible-tr ${isOpen}">
       <td class="mobile-summary-td mobile-only" onclick="openRowModal('${b.id}')">
            <div style="display:flex; align-items:center; gap:12px; text-align:left;">
              <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">📄</div>
@@ -1283,19 +1292,19 @@ function renderBills(){
              ${pesoShort(b.amount)}
           </div>
       </td>
-      <td class="edit-field" data-label="#">${idx+1}</td>
+      <td class="edit-field" data-label="#" class="hide-mobile">${idx+1}</td>
       <td class="edit-field" data-label="Due Date"><input type="date" data-bill-date="${b.id}" value="${b.date||''}"></td>
       <td class="edit-field" data-label="Bill"><input type="text" data-bill-name="${b.id}" value="${escapeHtml(b.name||'')}" placeholder="e.g. Electricity"></td>
       <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-bill-amount="${b.id}" value="${val(b.amount)}" placeholder="0"></td>
-      <td class="edit-field" data-label="Paid Via">
+      <td class="edit-field" data-label="Paid Via" class="hide-mobile">
         <select data-bill-account="${b.id}">
           <option value="">—</option>
           ${accounts.map(a=>`<option value="${a.id}" ${b.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
         </select>
       </td>
       <td class="edit-field" data-label="Paid?"><input type="checkbox" class="checkbox" data-bill-paid="${b.id}" ${b.paid?'checked':''}></td>
-      <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
-      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+      <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-bill-del="${b.id}">✕</button></td>
+      <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
       </td>
     </tr>`}).join('');
@@ -1303,7 +1312,7 @@ function renderBills(){
   const subRows = (DATA.subscriptions||[]).map((s,idx)=>{
     const isOpen = activeModalRowId === s.id ? 'modal-open' : '';
     return `
-    <tr class="${isOpen}">
+    <tr class="collapsible-tr ${isOpen}">
       <td class="mobile-summary-td mobile-only" onclick="openRowModal('${s.id}')">
            <div style="text-align:left;">
               <div style="font-weight:600;font-size:14.5px;">${escapeHtml(s.name) || 'Subscription'}</div>
@@ -1313,8 +1322,8 @@ function renderBills(){
       </td>
       <td class="edit-field" data-label="Subscription"><input type="text" data-sub-name="${s.id}" value="${escapeHtml(s.name||'')}" placeholder="e.g. Netflix"></td>
       <td class="edit-field" data-label="Monthly Amt"><input type="number" step="any" class="mono" data-sub-amount="${s.id}" value="${val(s.amount)}" placeholder="0"></td>
-      <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
-      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+      <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-sub-del="${s.id}">✕</button></td>
+      <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
       </td>
     </tr>`}).join('');
@@ -1325,12 +1334,14 @@ function renderBills(){
   <div class="month-picker-tabs">${tabs}</div>
 
   <div class="grid cols-2">
-    <div class="card">
+    <div class="card" style="padding:12px 16px;">
       <h3>Bills &amp; Subscriptions — ${MONTH_NAMES[activeMonth]}</h3>
-      <table>
-        <thead><tr><th>#</th><th>Due date</th><th>Bill</th><th>Amount</th><th>Paid via</th><th style="text-align:center;">Paid</th><th></th></tr></thead>
-        <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
-      </table>
+      <div class="table-responsive">
+        <table>
+          <thead><tr><th class="hide-mobile">#</th><th>Due date</th><th>Bill</th><th>Amount</th><th class="hide-mobile">Paid via</th><th style="text-align:center;">Paid</th><th class="hide-mobile"></th></tr></thead>
+          <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">No bills yet — add your first one below.</td></tr>`}</tbody>
+        </table>
+      </div>
       <button class="btn small ghost add-row" id="addBillBtn">+ Add bill</button>
     </div>
     <div class="card">
@@ -1347,11 +1358,13 @@ function renderBills(){
   </div>
 
   <div class="section-title">Recurring credit card bills</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Subscription</th><th>Monthly amount</th><th></th></tr></thead>
-      <tbody>${subRows || `<tr class="no-modal"><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Subscription</th><th>Monthly amount</th><th class="hide-mobile"></th></tr></thead>
+        <tbody>${subRows || `<tr class="no-modal"><td colspan="3" class="empty-note">No recurring subscriptions yet.</td></tr>`}</tbody>
+      </table>
+    </div>
     <button class="btn small ghost add-row" id="addSubBtn">+ Add subscription</button>
     <div class="hint" style="margin-top:10px;">Total recurring: <b class="mono">${peso(subTotal)}</b> / month</div>
   </div>
@@ -1374,7 +1387,7 @@ function renderCredit(){
   const rows = txs.map(t=>{
     const isOpen = activeModalRowId === t.id ? 'modal-open' : '';
     return `
-    <tr class="${isOpen}">
+    <tr class="collapsible-tr ${isOpen}">
       <td class="mobile-summary-td mobile-only" onclick="openRowModal('${t.id}')">
            <div style="display:flex; align-items:center; gap:14px; text-align:left;">
              <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">💳</div>
@@ -1396,8 +1409,8 @@ function renderCredit(){
         </select>
       </td>
       <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-tx-amount="${t.id}" value="${val(t.amount)}" placeholder="0"></td>
-      <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
-      <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+      <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-tx-del="${t.id}">✕</button></td>
+      <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
       </td>
     </tr>`}).join('');
@@ -1424,11 +1437,13 @@ function renderCredit(){
   </div>
 
   <div class="section-title">Transactions</div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
-      <tbody>${rows || `<tr class="no-modal"><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
-    </table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
+        <tbody>${rows || `<tr class="no-modal"><td colspan="5" class="empty-note">No transactions yet — log a charge or a payment.</td></tr>`}</tbody>
+      </table>
+    </div>
     <button class="btn small ghost add-row" id="addTxBtn">+ Add transaction</button>
     <div class="hint" style="margin-top:10px;">Charge increases what you've used. Payment reduces it — pay your statement in full to reset available credit.</div>
   </div>
@@ -1459,17 +1474,16 @@ function renderSettings(){
 
 /* ---------------- Monthly Budget tab (per month) ---------------- */
 function renderMonth(m){
-  ensureYearDataExists(DATA, currentAppYear);
-  const mb = DATA.monthlyBudget[currentAppYear][m] || {needs:[], wants:[], investments:[]};
-  const savingsPlan = DATA.savingsPlans[currentAppYear][m] || {planned:0, saved:false};
+  const mb = DATA.monthlyBudget[currentAppYear][m];
+  const savingsPlan = DATA.savingsPlans[currentAppYear][m];
   const savingsPerPayout = Number(savingsPlan.planned||0)/2;
   const accounts = DATA.accounts||[];
 
   function itemRows(list, key){
-    return (list||[]).map(item=>{
+    return list.map(item=>{
       const isOpen = activeModalRowId === `${key}:${item.id}` ? 'modal-open' : '';
       return `
-      <tr class="${isOpen}">
+      <tr class="collapsible-tr ${isOpen}">
         <td class="mobile-summary-td mobile-only" onclick="openRowModal('${key}:${item.id}')">
            <div style="display:flex; align-items:center; gap:14px; text-align:left;">
              <div style="width:40px; height:40px; border-radius:50%; background:#f5f0e3; display:flex; align-items:center; justify-content:center; font-size:18px;">🛒</div>
@@ -1485,27 +1499,27 @@ function renderMonth(m){
         <td class="edit-field" data-label="Date"><input type="date" data-item-date="${key}:${item.id}" value="${item.date||''}"></td>
         <td class="edit-field" data-label="Item"><input type="text" data-item-name="${key}:${item.id}" value="${escapeHtml(item.name||'')}" placeholder="Item name"></td>
         <td class="edit-field" data-label="Amount"><input type="number" step="any" class="mono" data-item-amount="${key}:${item.id}" value="${val(item.amount)}" placeholder="0"></td>
-        <td class="edit-field" data-label="Account">
+        <td class="edit-field" data-label="Account" class="hide-mobile">
           <select data-item-account="${key}:${item.id}">
             <option value="">—</option>
             ${accounts.map(a=>`<option value="${a.id}" ${item.accountId===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
           </select>
         </td>
-        <td class="edit-field" data-label="Payout">
+        <td class="edit-field" data-label="Payout" class="hide-mobile">
           <select data-item-payout="${key}:${item.id}">
             <option value="1" ${item.payout==1?'selected':''}>1st payout</option>
             <option value="2" ${item.payout==2?'selected':''}>2nd payout</option>
           </select>
         </td>
-        <td class="edit-field" data-label="Remove" style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
-        <td class="edit-field mobile-only" style="border-bottom:none; justify-content:center; padding-top:16px; width:100%;">
+        <td class="edit-field" data-label="Remove" class="hide-mobile" style="text-align:right;"><button class="row-del" data-item-del="${key}:${item.id}">✕</button></td>
+        <td class="modal-close-cell">
           <button class="btn block" onclick="closeRowModal()">Done</button>
         </td>
       </tr>`}).join('');
   }
 
-  function totalFor(list){ return (list||[]).reduce((s,i)=>s+Number(i.amount||0),0); }
-  function totalForPayout(list,p){ return (list||[]).filter(i=>Number(i.payout)===p).reduce((s,i)=>s+Number(i.amount||0),0); }
+  function totalFor(list){ return list.reduce((s,i)=>s+Number(i.amount||0),0); }
+  function totalForPayout(list,p){ return list.filter(i=>Number(i.payout)===p).reduce((s,i)=>s+Number(i.amount||0),0); }
 
   const totalNeeds = totalFor(mb.needs), totalWants = totalFor(mb.wants), totalInv = totalFor(mb.investments);
   
@@ -1518,8 +1532,8 @@ function renderMonth(m){
   const payout1 = sal1Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   const payout2 = sal2Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   
-  const date1Str = sal1Txs.length ? sal1Txs.sort((a,b)=>(a.date||'').localeCompare(b.date||''))[0].date : `${prefix}-15`;
-  const date2Str = sal2Txs.length ? sal2Txs.sort((a,b)=>(a.date||'').localeCompare(b.date||''))[0].date : `${prefix}-28`;
+  const date1Str = sal1Txs.length ? sal1Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-15`;
+  const date2Str = sal2Txs.length ? sal2Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-28`;
 
   const d1 = new Date(date1Str).getTime();
   const d2 = new Date(date2Str).getTime();
@@ -1598,23 +1612,29 @@ function renderMonth(m){
   </div>
 
   <div class="section-title">Needs <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalNeeds)}</span></div>
-  <div class="card">
-    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.needs,'needs') || `<tr class="no-modal"><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
+      <tbody>${itemRows(mb.needs,'needs') || `<tr class="no-modal"><td colspan="6" class="empty-note">No needs logged yet.</td></tr>`}</tbody></table>
+    </div>
     <button class="btn small ghost add-row" data-add-item="needs">+ Add need</button>
   </div>
 
   <div class="section-title">Wants <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalWants)}</span></div>
-  <div class="card">
-    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.wants,'wants') || `<tr class="no-modal"><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
+      <tbody>${itemRows(mb.wants,'wants') || `<tr class="no-modal"><td colspan="6" class="empty-note">No wants logged yet.</td></tr>`}</tbody></table>
+    </div>
     <button class="btn small ghost add-row" data-add-item="wants">+ Add want</button>
   </div>
 
   <div class="section-title">Investments <span class="mono" style="text-transform:none;color:var(--ink-soft);">· ${peso(totalInv)}</span></div>
-  <div class="card">
-    <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th>Account</th><th>Payout</th><th></th></tr></thead>
-    <tbody>${itemRows(mb.investments,'investments') || `<tr class="no-modal"><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
+  <div class="card" style="padding:12px 16px;">
+    <div class="table-responsive">
+      <table><thead><tr><th>Date</th><th>Item</th><th>Amount</th><th class="hide-mobile">Account</th><th class="hide-mobile">Payout</th><th class="hide-mobile"></th></tr></thead>
+      <tbody>${itemRows(mb.investments,'investments') || `<tr class="no-modal"><td colspan="6" class="empty-note">No investments logged yet.</td></tr>`}</tbody></table>
+    </div>
     <button class="btn small ghost add-row" data-add-item="investments">+ Add investment</button>
   </div>
   `;
@@ -1631,8 +1651,6 @@ function attachHandlers(){
       btn.addEventListener('click', ()=>{ renderBills._month = btn.dataset.billMonthTab; render(); });
     });
     $("#addBillBtn")?.addEventListener('click', ()=>{
-      ensureYearDataExists(DATA, currentAppYear);
-      if(!DATA.bills[currentAppYear][renderBills._month]) DATA.bills[currentAppYear][renderBills._month] = [];
       DATA.bills[currentAppYear][renderBills._month].push({id:uid(), date:'', name:'', amount:0, accountId:'', paid:false});
       queueSave(); render();
     });
@@ -1650,9 +1668,7 @@ function attachHandlers(){
     $$("[data-bill-del]").forEach(i=>i.addEventListener('click', e=>{
       const id = e.target.dataset.billDel;
       DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBillId !== id);
-      if(DATA.bills[currentAppYear] && DATA.bills[currentAppYear][renderBills._month]) {
-        DATA.bills[currentAppYear][renderBills._month] = DATA.bills[currentAppYear][renderBills._month].filter(b=>b.id!==id);
-      }
+      DATA.bills[currentAppYear][renderBills._month] = DATA.bills[currentAppYear][renderBills._month].filter(b=>b.id!==id);
       queueSave(); render();
     }));
     $("#addSubBtn")?.addEventListener('click', ()=>{
@@ -1684,7 +1700,6 @@ function attachHandlers(){
     $$("[data-savings-planned]").forEach(i=>{
       i.addEventListener('input', e=>{
         const m = e.target.dataset.savingsPlanned;
-        ensureYearDataExists(DATA, currentAppYear);
         DATA.savingsPlans[currentAppYear][m].planned = Number(e.target.value);
         queueSave();
       });
@@ -1692,7 +1707,6 @@ function attachHandlers(){
     });
     $$("[data-savings-saved]").forEach(i=>i.addEventListener('change', e=>{
       const m = e.target.dataset.savingsSaved;
-      ensureYearDataExists(DATA, currentAppYear);
       DATA.savingsPlans[currentAppYear][m].saved = e.target.checked;
       queueSave(); render();
     }));
@@ -1776,8 +1790,6 @@ function attachHandlers(){
     const m = currentMonth;
     $$("[data-add-item]").forEach(btn=>btn.addEventListener('click', ()=>{
       const key = btn.dataset.addItem;
-      ensureYearDataExists(DATA, currentAppYear);
-      if(!DATA.monthlyBudget[currentAppYear][m][key]) DATA.monthlyBudget[currentAppYear][m][key] = [];
       DATA.monthlyBudget[currentAppYear][m][key].push({id:uid(), date:'', name:'', amount:0, accountId:'', payout:1});
       queueSave(); render();
     }));
@@ -1819,9 +1831,7 @@ function attachHandlers(){
     $$("[data-item-del]").forEach(i=>i.addEventListener('click', e=>{
       const [key,id] = e.target.dataset.itemDel.split(':');
       DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBudgetId !== id);
-      if(DATA.monthlyBudget[currentAppYear] && DATA.monthlyBudget[currentAppYear][m] && DATA.monthlyBudget[currentAppYear][m][key]) {
-        DATA.monthlyBudget[currentAppYear][m][key] = DATA.monthlyBudget[currentAppYear][m][key].filter(it=>it.id!==id);
-      }
+      DATA.monthlyBudget[currentAppYear][m][key] = DATA.monthlyBudget[currentAppYear][m][key].filter(it=>it.id!==id);
       queueSave(); render();
     }));
   }
@@ -1837,7 +1847,7 @@ function attachHandlers(){
       drawCashFlowChart('cashFlowChart');
     }
     if(currentTab==='bills'){
-      const list = (DATA.bills[currentAppYear] && DATA.bills[currentAppYear][renderBills._month]) ? DATA.bills[currentAppYear][renderBills._month] : [];
+      const list = DATA.bills[currentAppYear][renderBills._month]||[];
       const paid = list.filter(b=>b.paid).length;
       drawDonut('billsDonut', paid, list.length-paid);
     }
@@ -1847,17 +1857,30 @@ function attachHandlers(){
   }catch(e){ console.warn('chart draw skipped', e); }
 }
 
+// Universal tap listener for Mobile Collapsible Rows (Accordion)
+document.addEventListener('click', e => {
+  if (window.innerWidth > 860) return; // Only apply on mobile
+  const tr = e.target.closest('.collapsible-tr');
+  if(tr) {
+    // Ignore clicks if they tapped on an input, button, or select dropdown
+    const tag = e.target.tagName;
+    if(tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON' || e.target.closest('.checkbox') || e.target.closest('.row-del')) return;
+    tr.classList.toggle('open');
+  }
+});
+
 function setBill(id, field, val){
+  let found = false;
   Object.keys(DATA.bills[currentAppYear] || {}).forEach(m => {
-    const b = (DATA.bills[currentAppYear][m] || []).find(x=>x.id===id);
-    if(b){ b[field]=val; queueSave(); }
+    const b = DATA.bills[currentAppYear][m].find(x=>x.id===id);
+    if(b){ b[field]=val; queueSave(); found=true; }
   });
 }
 
 function syncBillToMoneyTx(billId) {
   let b = null;
   Object.keys(DATA.bills[currentAppYear] || {}).forEach(m => {
-    const bill = (DATA.bills[currentAppYear][m] || []).find(x=>x.id===billId);
+    const bill = DATA.bills[currentAppYear][m].find(x=>x.id===billId);
     if(bill) b = bill;
   });
   if(!b) return;
@@ -1891,9 +1914,7 @@ function syncBillToMoneyTx(billId) {
 }
 
 function syncBudgetToMoneyTx(year, month, category, itemId) {
-  const item = (DATA.monthlyBudget[year] && DATA.monthlyBudget[year][month] && DATA.monthlyBudget[year][month][category]) 
-    ? DATA.monthlyBudget[year][month][category].find(x=>x.id===itemId) 
-    : null;
+  const item = DATA.monthlyBudget[year][month][category].find(x=>x.id===itemId);
   if(!item) return;
 
   let txIndex = DATA.moneyTx.findIndex(t => t.linkedBudgetId === itemId);
@@ -1943,10 +1964,8 @@ function setMoneyTx(id, field, val){
   if(t){ t[field]=val; queueSave(); }
 }
 function setItem(m, key, id, field, val){
-  if (DATA.monthlyBudget[currentAppYear] && DATA.monthlyBudget[currentAppYear][m] && DATA.monthlyBudget[currentAppYear][m][key]) {
-    const item = DATA.monthlyBudget[currentAppYear][m][key].find(x=>x.id===id);
-    if(item){ item[field]=val; queueSave(); }
-  }
+  const item = DATA.monthlyBudget[currentAppYear][m][key].find(x=>x.id===id);
+  if(item){ item[field]=val; queueSave(); }
 }
 
 /* ---------------- Charts ---------------- */
