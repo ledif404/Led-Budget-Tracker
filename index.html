@@ -259,15 +259,13 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   thead { display: none; }
   tbody { display: block; width: 100%; }
   
-  /* Every row is a distinct card block */
   tr:not(.no-modal) {
     display: block; width: 100%; margin-bottom: 12px; background: #fff;
     border-bottom: 1px solid var(--line); padding: 4px 0; cursor: pointer;
   }
   
-  /* Hide all normal edit fields on mobile by default */
-  tr:not(.no-modal) td.edit-field { display: none; }
-  tr:not(.no-modal) td.mobile-summary-td { display: flex; width: 100%; justify-content: space-between; align-items: center; border:none; padding:8px 0; }
+  td.edit-field { display: none; }
+  td.mobile-summary-td { display: flex; width: 100%; justify-content: space-between; align-items: center; border:none; padding:8px 0; }
 
   /* When row is tapped and becomes an open modal */
   tr.modal-open {
@@ -289,10 +287,8 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
     font-size: 20px; font-weight: 600; margin-bottom: 16px; text-align: center; color: var(--green-950);
   }
   
-  /* Label generation inside the modal */
   tr.modal-open td.edit-field::before { content: attr(data-label); font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--ink-soft); margin-right: 12px; flex-shrink:0; }
   
-  /* Inputs inside modal */
   tr.modal-open td input, tr.modal-open td select { width: 100%; max-width: 180px; text-align: right; text-align-last: right; padding: 6px 8px; }
   td input[type="checkbox"] { margin: 0; width: 20px; height: 20px; }
   .row-del { margin-left: auto; }
@@ -311,7 +307,6 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
   }
   .cal-date { font-size: 11px !important; margin-bottom: 2px !important; text-align:center; width:100%; }
   
-  /* Hide the description text on mobile so only the bubble remains */
   .cal-tx { font-size: 9px !important; padding: 2px !important; flex-direction: column !important; align-items: center !important; justify-content:center!important;}
   .cal-tx span { margin: 0 !important; text-align:center !important; } 
   .cal-tx .tx-desc { display: none !important; } 
@@ -441,20 +436,32 @@ function uid(){ return Math.random().toString(36).slice(2,10); }
 function capitalize(s){ return s && s[0].toUpperCase() + s.slice(1); }
 
 function ensureYearDataExists(data, year) {
+  if(!data) return;
   if(!data.monthlyBudget) data.monthlyBudget = {};
   if(!data.savingsPlans) data.savingsPlans = {};
   if(!data.bills) data.bills = {};
   
-  if(!data.monthlyBudget[year]) {
-    data.monthlyBudget[year] = {};
-    data.savingsPlans[year] = {};
-    data.bills[year] = {};
-    MONTHS.forEach(m => {
+  if(!data.monthlyBudget[year]) data.monthlyBudget[year] = {};
+  if(!data.savingsPlans[year]) data.savingsPlans[year] = {};
+  if(!data.bills[year]) data.bills[year] = {};
+
+  MONTHS.forEach(m => {
+    if(!data.monthlyBudget[year][m]) {
       data.monthlyBudget[year][m] = {needs:[], wants:[], investments:[]};
+    } else {
+      data.monthlyBudget[year][m].needs = data.monthlyBudget[year][m].needs || [];
+      data.monthlyBudget[year][m].wants = data.monthlyBudget[year][m].wants || [];
+      data.monthlyBudget[year][m].investments = data.monthlyBudget[year][m].investments || [];
+    }
+
+    if(!data.savingsPlans[year][m]) {
       data.savingsPlans[year][m] = {planned:0, saved:false};
+    }
+
+    if(!data.bills[year][m]) {
       data.bills[year][m] = [];
-    });
-  }
+    }
+  });
 }
 
 function defaultData(){
@@ -494,7 +501,6 @@ let currentAppYear = new Date().getFullYear().toString();
 let calendarMonth = currentMonth;
 let calendarYear = currentAppYear;
 
-// Used to track which table row is currently expanded as a modal on mobile
 let activeModalRowId = null;
 
 const $ = sel => document.querySelector(sel);
@@ -549,7 +555,7 @@ $("#sidebarOverlay")?.addEventListener('click', toggleMobileMenu);
 
 /* ---------------- Mobile Table Modal Handlers ---------------- */
 function openRowModal(id) {
-  if (window.innerWidth > 860) return; // Only apply on mobile
+  if (window.innerWidth > 860) return;
   activeModalRowId = id;
   render();
 }
@@ -672,7 +678,10 @@ function mergeDefaults(data){
   out.savingsPlans = out.savingsPlans || {};
   out.bills = out.bills || {};
   
-  ensureYearDataExists(out, currentAppYear);
+  ['2026', '2027', '2028', '2029', '2030'].forEach(y => {
+    ensureYearDataExists(out, y);
+  });
+  
   return out;
 }
 
@@ -786,7 +795,7 @@ const TITLES = {
 
 function goTab(tab, month){
   currentTab = tab;
-  activeModalRowId = null; // reset modal states on tab switch
+  activeModalRowId = null; 
   if(tab==='month') currentMonth = month;
   setActiveNav(tab, month);
   if(tab==='month'){
@@ -797,7 +806,6 @@ function goTab(tab, month){
     $("#pageSub").textContent = TITLES[tab][1];
   }
   
-  // Auto-close mobile menu if open
   if($(".sidebar").classList.contains("open")) {
     toggleMobileMenu();
   }
@@ -825,10 +833,9 @@ function render(){
     } catch (e) {}
   }
 
-  // Manage mobile overlay
   const overlay = document.getElementById('tableModalOverlay');
-  if(activeModalRowId) overlay.classList.add('show');
-  else overlay.classList.remove('show');
+  if(activeModalRowId) overlay?.classList.add('show');
+  else overlay?.classList.remove('show');
 
   if(currentTab==='dashboard') el.innerHTML = renderDashboard();
   else if(currentTab==='accounts') el.innerHTML = renderAccounts();
@@ -1176,7 +1183,7 @@ function renderSavings(){
   const selectedYearNum = parseInt(currentAppYear);
 
   const rows = MONTHS.map((m, idx)=>{
-    const plan = DATA.savingsPlans[currentAppYear][m];
+    const plan = DATA.savingsPlans[currentAppYear][m] || {planned:0, saved:false};
     const isFuture = (selectedYearNum > currentYearNum) || (selectedYearNum === currentYearNum && idx > currentMonthIdx);
     const isOpen = activeModalRowId === `sav-${m}` ? 'modal-open' : '';
     
@@ -1255,7 +1262,7 @@ function renderBills(){
   renderBills._month = activeMonth;
 
   const tabs = availableMonths.map(m=>`<button data-bill-month-tab="${m}" class="${m===activeMonth?'active':''}">${m} ${currentAppYear}</button>`).join('');
-  const list = DATA.bills[currentAppYear][activeMonth] || [];
+  const list = (DATA.bills[currentAppYear] && DATA.bills[currentAppYear][activeMonth]) ? DATA.bills[currentAppYear][activeMonth] : [];
   const paid = list.filter(b=>b.paid).length;
   const pct = list.length ? Math.round(paid/list.length*100) : 0;
   const accounts = DATA.accounts||[];
@@ -1452,13 +1459,14 @@ function renderSettings(){
 
 /* ---------------- Monthly Budget tab (per month) ---------------- */
 function renderMonth(m){
-  const mb = DATA.monthlyBudget[currentAppYear][m];
-  const savingsPlan = DATA.savingsPlans[currentAppYear][m];
+  ensureYearDataExists(DATA, currentAppYear);
+  const mb = DATA.monthlyBudget[currentAppYear][m] || {needs:[], wants:[], investments:[]};
+  const savingsPlan = DATA.savingsPlans[currentAppYear][m] || {planned:0, saved:false};
   const savingsPerPayout = Number(savingsPlan.planned||0)/2;
   const accounts = DATA.accounts||[];
 
   function itemRows(list, key){
-    return list.map(item=>{
+    return (list||[]).map(item=>{
       const isOpen = activeModalRowId === `${key}:${item.id}` ? 'modal-open' : '';
       return `
       <tr class="${isOpen}">
@@ -1496,8 +1504,8 @@ function renderMonth(m){
       </tr>`}).join('');
   }
 
-  function totalFor(list){ return list.reduce((s,i)=>s+Number(i.amount||0),0); }
-  function totalForPayout(list,p){ return list.filter(i=>Number(i.payout)===p).reduce((s,i)=>s+Number(i.amount||0),0); }
+  function totalFor(list){ return (list||[]).reduce((s,i)=>s+Number(i.amount||0),0); }
+  function totalForPayout(list,p){ return (list||[]).filter(i=>Number(i.payout)===p).reduce((s,i)=>s+Number(i.amount||0),0); }
 
   const totalNeeds = totalFor(mb.needs), totalWants = totalFor(mb.wants), totalInv = totalFor(mb.investments);
   
@@ -1510,8 +1518,8 @@ function renderMonth(m){
   const payout1 = sal1Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   const payout2 = sal2Txs.reduce((s, t) => s + Number(t.amount||0), 0);
   
-  const date1Str = sal1Txs.length ? sal1Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-15`;
-  const date2Str = sal2Txs.length ? sal2Txs.sort((a,b)=>a.date.localeCompare(b.date))[0].date : `${prefix}-28`;
+  const date1Str = sal1Txs.length ? sal1Txs.sort((a,b)=>(a.date||'').localeCompare(b.date||''))[0].date : `${prefix}-15`;
+  const date2Str = sal2Txs.length ? sal2Txs.sort((a,b)=>(a.date||'').localeCompare(b.date||''))[0].date : `${prefix}-28`;
 
   const d1 = new Date(date1Str).getTime();
   const d2 = new Date(date2Str).getTime();
@@ -1623,6 +1631,8 @@ function attachHandlers(){
       btn.addEventListener('click', ()=>{ renderBills._month = btn.dataset.billMonthTab; render(); });
     });
     $("#addBillBtn")?.addEventListener('click', ()=>{
+      ensureYearDataExists(DATA, currentAppYear);
+      if(!DATA.bills[currentAppYear][renderBills._month]) DATA.bills[currentAppYear][renderBills._month] = [];
       DATA.bills[currentAppYear][renderBills._month].push({id:uid(), date:'', name:'', amount:0, accountId:'', paid:false});
       queueSave(); render();
     });
@@ -1640,9 +1650,11 @@ function attachHandlers(){
     $$("[data-bill-del]").forEach(i=>i.addEventListener('click', e=>{
       const id = e.target.dataset.billDel;
       DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBillId !== id);
-      DATA.bills[currentAppYear][renderBills._month] = DATA.bills[currentAppYear][renderBills._month].filter(b=>b.id!==id);
+      if(DATA.bills[currentAppYear] && DATA.bills[currentAppYear][renderBills._month]) {
+        DATA.bills[currentAppYear][renderBills._month] = DATA.bills[currentAppYear][renderBills._month].filter(b=>b.id!==id);
+      }
       queueSave(); render();
-    });
+    }));
     $("#addSubBtn")?.addEventListener('click', ()=>{
       DATA.subscriptions.push({id:uid(), name:'', amount:0});
       queueSave(); render();
@@ -1672,6 +1684,7 @@ function attachHandlers(){
     $$("[data-savings-planned]").forEach(i=>{
       i.addEventListener('input', e=>{
         const m = e.target.dataset.savingsPlanned;
+        ensureYearDataExists(DATA, currentAppYear);
         DATA.savingsPlans[currentAppYear][m].planned = Number(e.target.value);
         queueSave();
       });
@@ -1679,6 +1692,7 @@ function attachHandlers(){
     });
     $$("[data-savings-saved]").forEach(i=>i.addEventListener('change', e=>{
       const m = e.target.dataset.savingsSaved;
+      ensureYearDataExists(DATA, currentAppYear);
       DATA.savingsPlans[currentAppYear][m].saved = e.target.checked;
       queueSave(); render();
     }));
@@ -1702,7 +1716,7 @@ function attachHandlers(){
     $$("[data-tx-del]").forEach(i=>i.addEventListener('click', e=>{
       DATA.creditCard.transactions = DATA.creditCard.transactions.filter(t=>t.id!==e.target.dataset.txDel);
       queueSave(); render();
-    });
+    }));
   }
   if(currentTab==='accounts'){
     $("#addAccountBtn")?.addEventListener('click', ()=>{
@@ -1762,6 +1776,8 @@ function attachHandlers(){
     const m = currentMonth;
     $$("[data-add-item]").forEach(btn=>btn.addEventListener('click', ()=>{
       const key = btn.dataset.addItem;
+      ensureYearDataExists(DATA, currentAppYear);
+      if(!DATA.monthlyBudget[currentAppYear][m][key]) DATA.monthlyBudget[currentAppYear][m][key] = [];
       DATA.monthlyBudget[currentAppYear][m][key].push({id:uid(), date:'', name:'', amount:0, accountId:'', payout:1});
       queueSave(); render();
     }));
@@ -1803,7 +1819,9 @@ function attachHandlers(){
     $$("[data-item-del]").forEach(i=>i.addEventListener('click', e=>{
       const [key,id] = e.target.dataset.itemDel.split(':');
       DATA.moneyTx = DATA.moneyTx.filter(t => t.linkedBudgetId !== id);
-      DATA.monthlyBudget[currentAppYear][m][key] = DATA.monthlyBudget[currentAppYear][m][key].filter(it=>it.id!==id);
+      if(DATA.monthlyBudget[currentAppYear] && DATA.monthlyBudget[currentAppYear][m] && DATA.monthlyBudget[currentAppYear][m][key]) {
+        DATA.monthlyBudget[currentAppYear][m][key] = DATA.monthlyBudget[currentAppYear][m][key].filter(it=>it.id!==id);
+      }
       queueSave(); render();
     }));
   }
@@ -1819,7 +1837,7 @@ function attachHandlers(){
       drawCashFlowChart('cashFlowChart');
     }
     if(currentTab==='bills'){
-      const list = DATA.bills[currentAppYear][renderBills._month]||[];
+      const list = (DATA.bills[currentAppYear] && DATA.bills[currentAppYear][renderBills._month]) ? DATA.bills[currentAppYear][renderBills._month] : [];
       const paid = list.filter(b=>b.paid).length;
       drawDonut('billsDonut', paid, list.length-paid);
     }
@@ -1830,17 +1848,16 @@ function attachHandlers(){
 }
 
 function setBill(id, field, val){
-  let found = false;
   Object.keys(DATA.bills[currentAppYear] || {}).forEach(m => {
-    const b = DATA.bills[currentAppYear][m].find(x=>x.id===id);
-    if(b){ b[field]=val; queueSave(); found=true; }
+    const b = (DATA.bills[currentAppYear][m] || []).find(x=>x.id===id);
+    if(b){ b[field]=val; queueSave(); }
   });
 }
 
 function syncBillToMoneyTx(billId) {
   let b = null;
   Object.keys(DATA.bills[currentAppYear] || {}).forEach(m => {
-    const bill = DATA.bills[currentAppYear][m].find(x=>x.id===billId);
+    const bill = (DATA.bills[currentAppYear][m] || []).find(x=>x.id===billId);
     if(bill) b = bill;
   });
   if(!b) return;
@@ -1874,7 +1891,9 @@ function syncBillToMoneyTx(billId) {
 }
 
 function syncBudgetToMoneyTx(year, month, category, itemId) {
-  const item = DATA.monthlyBudget[year][month][category].find(x=>x.id===itemId);
+  const item = (DATA.monthlyBudget[year] && DATA.monthlyBudget[year][month] && DATA.monthlyBudget[year][month][category]) 
+    ? DATA.monthlyBudget[year][month][category].find(x=>x.id===itemId) 
+    : null;
   if(!item) return;
 
   let txIndex = DATA.moneyTx.findIndex(t => t.linkedBudgetId === itemId);
@@ -1924,8 +1943,10 @@ function setMoneyTx(id, field, val){
   if(t){ t[field]=val; queueSave(); }
 }
 function setItem(m, key, id, field, val){
-  const item = DATA.monthlyBudget[currentAppYear][m][key].find(x=>x.id===id);
-  if(item){ item[field]=val; queueSave(); }
+  if (DATA.monthlyBudget[currentAppYear] && DATA.monthlyBudget[currentAppYear][m] && DATA.monthlyBudget[currentAppYear][m][key]) {
+    const item = DATA.monthlyBudget[currentAppYear][m][key].find(x=>x.id===id);
+    if(item){ item[field]=val; queueSave(); }
+  }
 }
 
 /* ---------------- Charts ---------------- */
