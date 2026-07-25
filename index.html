@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<!-- Cache-busting tags to force browsers to always load the freshest version -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <title>The LEDger — Gen Z Budget Passbook</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -331,6 +336,9 @@ textarea.notes{width:100%;min-height:110px;border:1.5px solid var(--line);border
 </style>
 </head>
 <body>
+
+<!-- Force wipe any lingering old data on load -->
+<script>localStorage.removeItem('ledger_fb_config');</script>
 
 <!-- ============ AUTH SCREEN ============ -->
 <div id="authScreen" class="screen hidden">
@@ -1036,13 +1044,11 @@ function renderAccounts(){
   <button class="btn small ghost add-row" id="addAccountBtn" style="margin-top:12px;">+ Add account or bank</button>
 
   <div class="section-title">Money flow — every peso in, out, or moved</div>
-  <div class="card" style="padding:12px 16px;">
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Account</th><th class="hide-mobile">To (transfer)</th><th>Amount</th><th class="hide-mobile"></th></tr></thead>
-        <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
-      </table>
-    </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>To (transfer)</th><th>Amount</th><th></th></tr></thead>
+      <tbody>${rows || `<tr class="no-modal"><td colspan="7" class="empty-note">Nothing logged yet — add your salary as Income, or a bill as Expense, below.</td></tr>`}</tbody>
+    </table>
     <button class="btn small ghost add-row" id="addMoneyTxBtn" ${accounts.length? '' : 'disabled title="Add an account first"'}>+ Add entry</button>
     <div class="hint" style="margin-top:10px;">Income adds to an account. Expense takes from an account. Transfer moves money between two of your accounts (e.g. GCash → BPI). Note: Entries with a 🔒 are managed by your Monthly Budget or Bills Tracker.</div>
   </div>
